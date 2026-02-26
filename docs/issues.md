@@ -72,3 +72,52 @@ No GitHub Actions workflow for automatic deployment yet. Need to add `.github/wo
 ### Trunk Warning
 
 Trunk shows deprecation warning about `address` field - should migrate to `addresses` field in Trunk.toml.
+
+## Documentation
+
+### Missing README
+
+No README.md file in repository root. Should include:
+- Project description and features
+- Architecture overview
+- Build instructions
+- Usage examples
+- Screenshots
+- License information
+
+### Screenshots
+
+Only one screenshot exists (`images/cor24-interface-2026-02-26T05-07-30-868Z.png`). Need additional screenshots showing:
+- Example programs running
+- Step-through debugging
+- Challenge mode
+- Modal dialogs (Tutorial, ISA Reference, Help)
+
+## Testing
+
+### No Unit Tests
+
+The project has minimal test coverage:
+- `src/assembler.rs` - 2 basic tests (lc, push/pop)
+- `src/cpu/state.rs` - 3 basic tests (new, memory ops, sign extend)
+- `src/cpu/executor.rs` - 2 basic tests (add_immediate, lc)
+
+**Missing Test Coverage**:
+- All instruction execution paths
+- Branch/jump instructions
+- Stack operations (push/pop)
+- Memory load/store operations
+- Compare instructions and condition flag
+- Forward reference resolution in assembler
+- Error handling paths
+
+### No Integration Tests
+
+No tests for:
+- Full program assembly and execution
+- Challenge validation
+- WASM bindings
+
+### No CI Pipeline
+
+No GitHub Actions workflow for running tests on push/PR.
