@@ -306,72 +306,74 @@ pub fn app() -> Html {
 
         Callback::from(move |()| {
             rust_is_running.set(true);
-            let cpu = rust_cpu.clone();
+            let cpu_handle = rust_cpu.clone();
             let running = rust_is_running.clone();
             let state = rust_cpu_state.clone();
             let asm_lines = (*state).assembled_lines.clone();
+            let initial_cpu = (*rust_cpu).clone();
 
             // Run with animation using timer
             gloo::timers::callback::Timeout::new(50, move || {
                 fn run_step(
-                    cpu: yew::UseStateHandle<WasmCpu>,
+                    mut current_cpu: WasmCpu,
+                    cpu_handle: yew::UseStateHandle<WasmCpu>,
                     running: yew::UseStateHandle<bool>,
                     state: yew::UseStateHandle<RustCpuState>,
                     asm_lines: Vec<String>,
                     steps: u32,
                 ) {
-                    let mut new_cpu = (*cpu).clone();
-
                     // Execute a batch of instructions
                     let mut halted = false;
                     for _ in 0..10 {
-                        if new_cpu.is_halted() || new_cpu.should_stop_for_led() {
+                        if current_cpu.is_halted() || current_cpu.should_stop_for_led() {
                             halted = true;
                             break;
                         }
-                        if new_cpu.step().is_err() {
+                        if current_cpu.step().is_err() {
                             halted = true;
                             break;
                         }
                     }
 
-                    // Update state
-                    let regs = new_cpu.get_registers();
+                    // Update state for display
+                    let regs = current_cpu.get_registers();
                     let mut registers = [0u32; 8];
                     for (i, &val) in regs.iter().enumerate().take(8) {
                         registers[i] = val;
                     }
                     let mut memory_snapshot = Vec::new();
                     for addr in (0xFFFFC0..=0xFFFFFF).step_by(1) {
-                        memory_snapshot.push(new_cpu.read_byte(addr as u32));
+                        memory_snapshot.push(current_cpu.read_byte(addr as u32));
                     }
                     state.set(RustCpuState {
                         registers,
-                        pc: new_cpu.get_pc(),
-                        condition_flag: new_cpu.get_condition_flag(),
-                        is_halted: new_cpu.is_halted(),
-                        led_value: new_cpu.get_led_value(),
-                        cycle_count: new_cpu.get_cycle_count(),
+                        pc: current_cpu.get_pc(),
+                        condition_flag: current_cpu.get_condition_flag(),
+                        is_halted: current_cpu.is_halted(),
+                        led_value: current_cpu.get_led_value(),
+                        cycle_count: current_cpu.get_cycle_count(),
                         memory_snapshot,
-                        current_instruction: new_cpu.get_current_instruction(),
+                        current_instruction: current_cpu.get_current_instruction(),
                         assembled_lines: asm_lines.clone(),
                     });
-                    cpu.set(new_cpu.clone());
 
                     if halted || steps > 1000 {
+                        // Done - save final CPU state
+                        cpu_handle.set(current_cpu);
                         running.set(false);
                     } else {
-                        let cpu = cpu.clone();
+                        // Continue running - pass CPU value directly to next iteration
+                        let cpu_handle = cpu_handle.clone();
                         let running = running.clone();
                         let state = state.clone();
                         let asm_lines = asm_lines.clone();
                         gloo::timers::callback::Timeout::new(30, move || {
-                            run_step(cpu, running, state, asm_lines, steps + 10);
+                            run_step(current_cpu, cpu_handle, running, state, asm_lines, steps + 10);
                         }).forget();
                     }
                 }
 
-                run_step(cpu, running, state, asm_lines, 0);
+                run_step(initial_cpu, cpu_handle, running, state, asm_lines, 0);
             }).forget();
         })
     };
@@ -1005,11 +1007,12 @@ fn get_rust_examples() -> Vec<RustExample> {
     vec![
         RustExample {
             name: "LED Blink".to_string(),
-            description: "Binary counter on LEDs (0-15)".to_string(),
+            description: "Binary counter with delay loop".to_string(),
             rust_source: r#"#![no_std]
 use core::panic::PanicInfo;
 
 const LEDS: *mut u8 = 0xFF0000 as *mut u8;
+const DELAY: u32 = 10; // Spin loop iterations
 
 #[panic_handler]
 fn panic(_: &PanicInfo) -> ! { loop {} }
@@ -1019,70 +1022,88 @@ pub extern "C" fn main() -> ! {
     let mut counter: u8 = 0;
     loop {
         unsafe { core::ptr::write_volatile(LEDS, counter); }
+        // Delay loop
+        for _ in 0..DELAY {
+            unsafe { core::ptr::read_volatile(LEDS); }
+        }
         counter = counter.wrapping_add(1);
     }
 }"#.to_string(),
             wasm_hex: "0061 736d 0100 0000 010a 0260 0000 6002\n\
-                       7f7f 017f 0303 0200 0105 0301 0010 0619\n\
-                       037f 0141 8080 c000 0b7f 0041 8080 c000\n\
-                       0b7f 0041 8080 c000 0b07 3205 066d 656d".to_string(),
-            wasm_size: 448,
+                       7f7f 017f 0303 0200 01".to_string(),
+            wasm_size: 64,
             wasm_disassembly: r#"(module
-  (type (;0;) (func))
-  (type (;1;) (func (param i32 i32) (result i32)))
   (func (;0;) (type 0)
-    (local i32)
+    (local i32 i32)
     i32.const 0
     local.set 0
-    loop  ;; label = @1
+    loop  ;; outer loop
+      ;; write LED
       i32.const 0xFF0000
       local.get 0
       i32.store8
+      ;; delay loop: count 10 iterations
+      i32.const 10
+      local.set 1
+      loop  ;; delay
+        local.get 1
+        i32.const 1
+        i32.sub
+        local.tee 1
+        br_if 0
+      end
+      ;; increment counter
       local.get 0
       i32.const 1
       i32.add
       local.set 0
-      br 0 (;@1;)
-    end)
-  (memory (;0;) 16)
-  (export "memory" (memory 0))
-  (export "main" (func 0)))"#.to_string(),
-            cor24_assembly: r#"; Function: main
+      br 0
+    end))"#.to_string(),
+            cor24_assembly: r#"; LED Blink with delay loop
+; counter in 0(fp), delay in r2
 main:
         push    fp
         mov     fp, sp
-        add     sp, -6
+        add     sp, -3          ; reserve 1 word for counter
         lc      r0, 0
-        sw      r0, 0(fp)
-.L0:
-        lc      r0, 0
+        sw      r0, 0(fp)       ; counter = 0
+.loop:
+        ; Write counter to LEDs
+        la      r0, 0xFF0000
         lw      r1, 0(fp)
-        la      r2, 0xFF0000
-        add     r0, r2
         sb      r1, 0(r0)
+        ; Delay loop: r2 = 10, count down to 0
+        lc      r2, 10
+.delay:
+        lc      r0, 1
+        sub     r2, r0
+        brt     .delay          ; branch if r2 > 0
+        ; Increment counter
         lw      r0, 0(fp)
         lc      r1, 1
         add     r0, r1
         sw      r0, 0(fp)
-        bra     .L0"#.to_string(),
-            machine_code_hex: "6a4c 21fa 4400 8a00 4400 9300 2b00 00ff\n\
-                              0288 0092 0045 0101 8a00 13f0".to_string(),
-            machine_code_size: 53,
+        bra     .loop"#.to_string(),
+            machine_code_hex: "6a4c 21fd 4400 8a00 2b00 00ff 9300 8800\n\
+                              4602 4401 0a14 fd92 0045 0101 8a00 13e6".to_string(),
+            machine_code_size: 32,
             listing: r#"0000: 6A           push    fp
 0001: 4C           mov     fp, sp
-0002: 21 FA        add     sp, -6
+0002: 21 FD        add     sp, -3
 0004: 44 00        lc      r0, 0
 0006: 8A 00        sw      r0, 0(fp)
-0008: 44 00   .L0: lc      r0, 0
-000A: 93 00        lw      r1, 0(fp)
-000C: 2B 00 00 FF  la      r2, 0xFF0000
-0010: 02           add     r0, r2
-0011: 88 00        sb      r1, 0(r0)
-0013: 92 00        lw      r0, 0(fp)
-0015: 45 01        lc      r1, 1
-0017: 01           add     r0, r1
-0018: 8A 00        sw      r0, 0(fp)
-001A: 13 EC        bra     .L0"#.to_string(),
+0008: 2B 00 00 FF  .loop: la r0, 0xFF0000
+000C: 93 00        lw      r1, 0(fp)
+000E: 88 00        sb      r1, 0(r0)
+0010: 46 0A        lc      r2, 10
+0012: 44 01   .delay: lc r0, 1
+0014: 0A           sub     r2, r0
+0015: 15 FB        brt     .delay
+0017: 92 00        lw      r0, 0(fp)
+0019: 45 01        lc      r1, 1
+001B: 01           add     r0, r1
+001C: 8A 00        sw      r0, 0(fp)
+001E: 13 E8        bra     .loop"#.to_string(),
         },
         RustExample {
             name: "Add Function".to_string(),
