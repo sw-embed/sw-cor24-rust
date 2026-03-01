@@ -1,0 +1,17 @@
+[package]
+name = "wasm2cor24"
+version = "0.1.0"
+edition = "2021"
+description = "Translate WASM to COR24 assembly"
+
+[workspace]
+
+[dependencies]
+wasmparser = "0.121"
+anyhow = "1.0"
+
+[[bin]]
+name = "wasm2cor24"
+path = "src/main.rs"
+
+[dev-dependencies]
