@@ -11,6 +11,52 @@ pub const RESET_ADDRESS: u32 = 0x000000;
 /// Stack pointer initial value
 pub const INITIAL_SP: u32 = 0x00FC00;
 
+// Memory-mapped I/O addresses (24-bit)
+/// LED/Switch data register: write to control LEDs, read to get switch state
+pub const IO_LEDSWDAT: u32 = 0xFF0000;
+/// UART data register
+pub const IO_UARTDATA: u32 = 0xFFFF00;
+/// UART status register (bit 1 = RX ready, bit 2 = TX complete)
+pub const IO_UARTSTAT: u32 = 0xFFFF01;
+/// UART baud register
+pub const IO_UARTBAUD: u32 = 0xFFFF02;
+
+/// I/O peripheral state
+#[derive(Clone, Default, Serialize, Deserialize)]
+pub struct IoState {
+    /// LED output state (8 LEDs, directly written value)
+    pub leds: u8,
+    /// Switch input state (directly read value)
+    pub switches: u8,
+    /// UART transmit buffer (most recent byte sent)
+    pub uart_tx: u8,
+    /// UART transmit complete flag
+    pub uart_tx_complete: bool,
+    /// UART receive buffer
+    pub uart_rx: u8,
+    /// UART receive data ready flag
+    pub uart_rx_ready: bool,
+    /// UART baud rate register
+    pub uart_baud: u8,
+    /// Output text buffer (for UART terminal)
+    pub uart_output: String,
+}
+
+impl IoState {
+    pub fn new() -> Self {
+        Self {
+            leds: 0,
+            switches: 0,
+            uart_tx: 0,
+            uart_tx_complete: true, // TX starts ready
+            uart_rx: 0,
+            uart_rx_ready: false,
+            uart_baud: 0,
+            uart_output: String::new(),
+        }
+    }
+}
+
 /// COR24 CPU state
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CpuState {
@@ -28,6 +74,8 @@ pub struct CpuState {
     pub cycles: u64,
     /// Instruction count
     pub instructions: u64,
+    /// I/O peripheral state
+    pub io: IoState,
 }
 
 impl Default for CpuState {
@@ -47,6 +95,7 @@ impl CpuState {
             halted: false,
             cycles: 0,
             instructions: 0,
+            io: IoState::new(),
         };
         // Initialize stack pointer
         state.registers[4] = INITIAL_SP;
@@ -62,6 +111,7 @@ impl CpuState {
         self.halted = false;
         self.cycles = 0;
         self.instructions = 0;
+        self.io = IoState::new();
     }
 
     /// Hard reset (clears memory too)
@@ -70,16 +120,80 @@ impl CpuState {
         self.memory.fill(0);
     }
 
-    /// Read a byte from memory
-    pub fn read_byte(&self, addr: u32) -> u8 {
-        let addr = (addr as usize) % MEMORY_SIZE;
-        self.memory[addr]
+    /// Check if address is in I/O region (0xFF0000-0xFFFFFF)
+    fn is_io_addr(addr: u32) -> bool {
+        (addr & 0xFF0000) == 0xFF0000
     }
 
-    /// Write a byte to memory
+    /// Read a byte from memory or I/O
+    pub fn read_byte(&self, addr: u32) -> u8 {
+        let addr = addr & 0xFFFFFF; // Mask to 24 bits
+
+        if Self::is_io_addr(addr) {
+            self.read_io(addr)
+        } else {
+            let mem_addr = (addr as usize) % MEMORY_SIZE;
+            self.memory[mem_addr]
+        }
+    }
+
+    /// Write a byte to memory or I/O
     pub fn write_byte(&mut self, addr: u32, value: u8) {
-        let addr = (addr as usize) % MEMORY_SIZE;
-        self.memory[addr] = value;
+        let addr = addr & 0xFFFFFF; // Mask to 24 bits
+
+        if Self::is_io_addr(addr) {
+            self.write_io(addr, value);
+        } else {
+            let mem_addr = (addr as usize) % MEMORY_SIZE;
+            self.memory[mem_addr] = value;
+        }
+    }
+
+    /// Read from I/O register
+    fn read_io(&self, addr: u32) -> u8 {
+        match addr {
+            IO_LEDSWDAT => self.io.switches,
+            IO_UARTDATA => self.io.uart_rx,
+            IO_UARTSTAT => {
+                let mut status = 0u8;
+                if self.io.uart_rx_ready {
+                    status |= 0x01; // Bit 0: RX data ready
+                }
+                if self.io.uart_tx_complete {
+                    status |= 0x02; // Bit 1: TX complete (ready for next byte)
+                }
+                status
+            }
+            IO_UARTBAUD => self.io.uart_baud,
+            _ => 0, // Unknown I/O address
+        }
+    }
+
+    /// Write to I/O register
+    fn write_io(&mut self, addr: u32, value: u8) {
+        match addr {
+            IO_LEDSWDAT => {
+                self.io.leds = value;
+            }
+            IO_UARTDATA => {
+                self.io.uart_tx = value;
+                // Append to output buffer (for terminal display)
+                if value != 0 {
+                    self.io.uart_output.push(value as char);
+                }
+                self.io.uart_tx_complete = true; // Instant transmit in emulation
+            }
+            IO_UARTSTAT => {
+                // Writing to status clears flags (typical behavior)
+                if value & 0x01 != 0 {
+                    self.io.uart_rx_ready = false;
+                }
+            }
+            IO_UARTBAUD => {
+                self.io.uart_baud = value;
+            }
+            _ => {} // Ignore unknown I/O address
+        }
     }
 
     /// Read a 24-bit word from memory (little-endian)

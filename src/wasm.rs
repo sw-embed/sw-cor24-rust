@@ -174,6 +174,46 @@ impl WasmCpu {
     pub fn get_memory_slice(&self, start: u32, len: u32) -> Vec<u8> {
         (0..len).map(|i| self.cpu.read_byte(start + i)).collect()
     }
+
+    // ===== I/O Peripheral Access =====
+
+    /// Get LED state (8 bits)
+    pub fn get_leds(&self) -> u8 {
+        self.cpu.io.leds
+    }
+
+    /// Get switch state (8 bits)
+    pub fn get_switches(&self) -> u8 {
+        self.cpu.io.switches
+    }
+
+    /// Set switch state (simulates external switch input)
+    pub fn set_switches(&mut self, value: u8) {
+        self.cpu.io.switches = value;
+    }
+
+    /// Toggle a specific switch bit
+    pub fn toggle_switch(&mut self, bit: u8) {
+        if bit < 8 {
+            self.cpu.io.switches ^= 1 << bit;
+        }
+    }
+
+    /// Get UART output buffer
+    pub fn get_uart_output(&self) -> String {
+        self.cpu.io.uart_output.clone()
+    }
+
+    /// Clear UART output buffer
+    pub fn clear_uart_output(&mut self) {
+        self.cpu.io.uart_output.clear();
+    }
+
+    /// Send a character to UART RX (simulates input)
+    pub fn uart_send_char(&mut self, c: char) {
+        self.cpu.io.uart_rx = c as u8;
+        self.cpu.io.uart_rx_ready = true;
+    }
 }
 
 // ===== Challenge System =====

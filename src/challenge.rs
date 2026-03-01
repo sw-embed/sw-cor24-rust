@@ -241,5 +241,60 @@ loop:   add     r0,1        ; counter++
 "#
             .to_string(),
         ),
+        (
+            "LED Blink".to_string(),
+            "Memory-mapped I/O: Control LEDs at address 0xFF0000.".to_string(),
+            r#"; Example 9: LED Blink
+; COR24 uses memory-mapped I/O
+; LEDs at 0xFF0000 (write), Switches at 0xFF0000 (read)
+;
+; This program cycles through LED patterns.
+; Click Step repeatedly to watch LEDs change!
+; Toggle switches in the I/O panel to see input.
+
+        la      r1,0xFF0000 ; I/O address (LEDSWDAT)
+        lc      r0,1        ; Start with LED 0
+
+loop:
+        sb      r0,0(r1)    ; Write to LEDs
+
+        ; Shift LED pattern left
+        lc      r2,1
+        shl     r0,r2
+
+        ; Check if we've shifted past bit 7
+        lcu     r2,128      ; 0x80
+        clu     r2,r0       ; C = (128 < pattern)?
+        brf     loop        ; If not overflowed, continue
+
+        ; Reset to LED 0
+        lc      r0,1
+        bra     loop
+
+        halt                ; Never reached
+"#
+            .to_string(),
+        ),
+        (
+            "Switch Echo".to_string(),
+            "Read switches and display on LEDs.".to_string(),
+            r#"; Example 10: Switch Echo
+; Read switches and echo to LEDs
+; Toggle switches in the I/O panel, then Step to update LEDs
+;
+; Like the reference blinky.c: *ledsw = *ledsw
+
+        la      r1,0xFF0000 ; I/O address (LEDSWDAT)
+
+loop:
+        lb      r0,0(r1)    ; Read switches
+        sb      r0,0(r1)    ; Write to LEDs
+
+        bra     loop        ; Keep polling
+
+        halt                ; Never reached
+"#
+            .to_string(),
+        ),
     ]
 }

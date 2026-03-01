@@ -340,6 +340,49 @@ pub fn app() -> Html {
                         </div>
                     </div>
 
+                    // I/O Panel: LEDs and Switches
+                    <div class="io-panel">
+                        <h3>{"I/O Peripherals"}</h3>
+                        <div class="io-section">
+                            <div class="io-label">{"LEDs (0xFF0000)"}</div>
+                            <div class="led-row">
+                                {for (0..8).rev().map(|i| {
+                                    let led_on = ((*cpu).get_leds() >> i) & 1 == 1;
+                                    let class = if led_on { "led led-on" } else { "led led-off" };
+                                    html! {
+                                        <div class={class} title={format!("LED {}", i)}>
+                                            {i}
+                                        </div>
+                                    }
+                                })}
+                            </div>
+                        </div>
+                        <div class="io-section">
+                            <div class="io-label">{"Switches (read from 0xFF0000)"}</div>
+                            <div class="switch-row">
+                                {for (0..8).rev().map(|i| {
+                                    let switch_on = ((*cpu).get_switches() >> i) & 1 == 1;
+                                    let class = if switch_on { "switch switch-on" } else { "switch switch-off" };
+                                    let cpu = cpu.clone();
+                                    let onclick = Callback::from(move |_| {
+                                        let mut new_cpu = (*cpu).clone();
+                                        new_cpu.toggle_switch(i);
+                                        cpu.set(new_cpu);
+                                    });
+                                    html! {
+                                        <div class={class} title={format!("Switch {}", i)} onclick={onclick}>
+                                            {i}
+                                        </div>
+                                    }
+                                })}
+                            </div>
+                        </div>
+                        <div class="io-values">
+                            <span>{"LEDs: "}{format!("0x{:02X}", (*cpu).get_leds())}</span>
+                            <span>{"  SW: "}{format!("0x{:02X}", (*cpu).get_switches())}</span>
+                        </div>
+                    </div>
+
                     <MemoryViewer
                         memory={memory}
                         pc={pc}
