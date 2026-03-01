@@ -5,6 +5,8 @@ pub struct HeaderProps {
     pub title: String,
     #[prop_or_default]
     pub subtitle: Option<String>,
+    #[prop_or_default]
+    pub children: Children,
 }
 
 #[function_component(Header)]
@@ -15,6 +17,7 @@ pub fn header(props: &HeaderProps) -> Html {
             if let Some(subtitle) = &props.subtitle {
                 <div class="subtitle">{subtitle}</div>
             }
+            {props.children.clone()}
         </header>
     }
 }

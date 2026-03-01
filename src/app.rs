@@ -1,8 +1,8 @@
 //! Yew application for COR24 Assembly Emulator
 
 use components::{
-    Header, LegendItem, MemoryViewer, Modal, ProgramArea, Register, RegisterPanel, Sidebar,
-    SidebarButton,
+    Collapsible, Header, LegendItem, MemoryViewer, Modal, ProgramArea, Register, RegisterPanel,
+    RustExample, RustPipeline, Sidebar, SidebarButton, Tab, TabBar,
 };
 use yew::prelude::*;
 
@@ -11,6 +11,14 @@ use crate::wasm::{WasmCpu, validate_challenge};
 
 #[function_component(App)]
 pub fn app() -> Html {
+    // Tab state
+    let active_tab = use_state(|| "assembler".to_string());
+
+    // Rust pipeline state
+    let rust_led_value = use_state(|| 0u8);
+    let rust_cycle_count = use_state(|| 0u32);
+    let rust_is_running = use_state(|| false);
+
     // State management
     let cpu = use_state(WasmCpu::new);
     let program_code = use_state(|| String::from(EXAMPLE_PROGRAM));
@@ -201,6 +209,61 @@ pub fn app() -> Html {
         })
     };
 
+    // Tab change callback
+    let on_tab_change = {
+        let active_tab = active_tab.clone();
+        Callback::from(move |tab: String| {
+            active_tab.set(tab);
+        })
+    };
+
+    // Rust pipeline run callback
+    let on_rust_run = {
+        let rust_led_value = rust_led_value.clone();
+        let rust_cycle_count = rust_cycle_count.clone();
+        let rust_is_running = rust_is_running.clone();
+
+        Callback::from(move |_example: RustExample| {
+            rust_is_running.set(true);
+            // Simulate running the pipeline - animate LED values
+            let led = rust_led_value.clone();
+            let cycles = rust_cycle_count.clone();
+            let running = rust_is_running.clone();
+
+            // Use gloo timer to animate
+            gloo::timers::callback::Timeout::new(100, move || {
+                let val = 0u8;
+                let led = led.clone();
+                let cycles = cycles.clone();
+                let running = running.clone();
+
+                // Animate through LED values
+                fn animate_step(val: u8, led: yew::UseStateHandle<u8>, cycles: yew::UseStateHandle<u32>, running: yew::UseStateHandle<bool>) {
+                    if val < 16 {
+                        led.set(val);
+                        cycles.set((val as u32 + 1) * 10);
+                        let led = led.clone();
+                        let cycles = cycles.clone();
+                        let running = running.clone();
+                        gloo::timers::callback::Timeout::new(150, move || {
+                            animate_step(val + 1, led, cycles, running);
+                        }).forget();
+                    } else {
+                        running.set(false);
+                    }
+                }
+
+                animate_step(val, led, cycles, running);
+            }).forget();
+        })
+    };
+
+    // Tab definitions
+    let tabs = vec![
+        Tab { id: "assembler".to_string(), label: "Assembler".to_string() },
+        Tab { id: "rust".to_string(), label: "Rust".to_string() },
+    ];
+
     // Register panel data
     let registers = {
         let regs = (*cpu).get_registers();
@@ -258,13 +321,19 @@ pub fn app() -> Html {
     // Get examples for the modal
     let examples = get_examples();
 
+    // Pre-built Rust examples
+    let rust_examples = get_rust_examples();
+
     html! {
         <div class="container">
-            <Header title="COR24 C-Oriented RISC Assembly Emulator" />
+            <Header title="COR24 C-Oriented RISC Assembly Emulator">
+                <TabBar tabs={tabs} active_tab={(*active_tab).clone()} on_tab_change={on_tab_change} />
+            </Header>
 
             <Sidebar buttons={sidebar_buttons} />
 
-            <div class="main-content">
+            // Assembler Tab Content
+            <div class={if *active_tab == "assembler" { "main-content" } else { "main-content hidden" }}>
                 <ProgramArea
                     on_assemble={on_assemble}
                     on_step={on_step}
@@ -340,9 +409,8 @@ pub fn app() -> Html {
                         </div>
                     </div>
 
-                    // I/O Panel: LEDs and Switches
-                    <div class="io-panel">
-                        <h3>{"I/O Peripherals"}</h3>
+                    // I/O Panel: LEDs and Switches (Collapsible)
+                    <Collapsible title="I/O Peripherals" initially_open={true}>
                         <div class="io-section">
                             <div class="io-label">{"LEDs (0xFF0000)"}</div>
                             <div class="led-row">
@@ -381,7 +449,7 @@ pub fn app() -> Html {
                             <span>{"LEDs: "}{format!("0x{:02X}", (*cpu).get_leds())}</span>
                             <span>{"  SW: "}{format!("0x{:02X}", (*cpu).get_switches())}</span>
                         </div>
-                    </div>
+                    </Collapsible>
 
                     <MemoryViewer
                         memory={memory}
@@ -391,6 +459,17 @@ pub fn app() -> Html {
                         bytes_to_show={128}
                     />
                 </div>
+            </div>
+
+            // Rust Pipeline Tab Content
+            <div class={if *active_tab == "rust" { "rust-tab-content" } else { "rust-tab-content hidden" }}>
+                <RustPipeline
+                    examples={rust_examples}
+                    on_run={on_rust_run}
+                    led_value={*rust_led_value}
+                    cycle_count={*rust_cycle_count}
+                    is_running={*rust_is_running}
+                />
             </div>
 
             // Challenge Mode Banner
@@ -759,3 +838,116 @@ jmp     (r1)        ; Return
     <li>The condition flag C is shown in the legend</li>
 </ul>
 "#;
+
+/// Pre-built Rust pipeline examples
+fn get_rust_examples() -> Vec<RustExample> {
+    vec![
+        RustExample {
+            name: "LED Blink".to_string(),
+            description: "Binary counter on LEDs (0-15)".to_string(),
+            rust_source: r#"#![no_std]
+use core::panic::PanicInfo;
+
+const LEDS: *mut u8 = 0xFF0000 as *mut u8;
+
+#[panic_handler]
+fn panic(_: &PanicInfo) -> ! { loop {} }
+
+#[no_mangle]
+pub extern "C" fn main() -> ! {
+    let mut counter: u8 = 0;
+    loop {
+        unsafe { core::ptr::write_volatile(LEDS, counter); }
+        counter = counter.wrapping_add(1);
+    }
+}"#.to_string(),
+            wasm_hex: "0061 736d 0100 0000 010a 0260 0000 6002\n\
+                       7f7f 017f 0303 0200 0105 0301 0010 0619\n\
+                       037f 0141 8080 c000 0b7f 0041 8080 c000\n\
+                       0b7f 0041 8080 c000 0b07 3205 066d 656d".to_string(),
+            wasm_size: 448,
+            cor24_assembly: r#"; Function: main
+main:
+        push    fp
+        mov     fp, sp
+        add     sp, -6
+        lc      r0, 0
+        sw      r0, 0(fp)
+.L0:
+        lc      r0, 0
+        lw      r1, 0(fp)
+        la      r2, 0xFF0000
+        add     r0, r2
+        sb      r1, 0(r0)
+        lw      r0, 0(fp)
+        lc      r1, 1
+        add     r0, r1
+        sw      r0, 0(fp)
+        bra     .L0"#.to_string(),
+            machine_code_hex: "6a4c 21fa 4400 8a00 4400 9300 2b00 00ff\n\
+                              0288 0092 0045 0101 8a00 13f0".to_string(),
+            machine_code_size: 53,
+            listing: r#"0000: 6A           push    fp
+0001: 4C           mov     fp, sp
+0002: 21 FA        add     sp, -6
+0004: 44 00        lc      r0, 0
+0006: 8A 00        sw      r0, 0(fp)
+0008: 44 00   .L0: lc      r0, 0
+000A: 93 00        lw      r1, 0(fp)
+000C: 2B 00 00 FF  la      r2, 0xFF0000
+0010: 02           add     r0, r2
+0011: 88 00        sb      r1, 0(r0)
+0013: 92 00        lw      r0, 0(fp)
+0015: 45 01        lc      r1, 1
+0017: 01           add     r0, r1
+0018: 8A 00        sw      r0, 0(fp)
+001A: 13 EC        bra     .L0"#.to_string(),
+        },
+        RustExample {
+            name: "Add Function".to_string(),
+            description: "Simple addition of two numbers".to_string(),
+            rust_source: r#"#![no_std]
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(_: &PanicInfo) -> ! { loop {} }
+
+#[no_mangle]
+pub extern "C" fn add(a: i32, b: i32) -> i32 {
+    a + b
+}"#.to_string(),
+            wasm_hex: "0061 736d 0100 0000 0107 0160 027f 7f01\n\
+                       7f03 0201 0007 0701 0361 6464 0000 0a09\n\
+                       0107 0020 0020 016a 0b".to_string(),
+            wasm_size: 42,
+            cor24_assembly: r#"; Function: add
+; Signature: (I32, I32) -> I32
+add:
+        push    fp
+        mov     fp, sp
+        add     sp, -6
+        sw      r0, 0(fp)
+        sw      r1, 3(fp)
+        lw      r0, 3(fp)
+        lw      r1, 0(fp)
+        add     r0, r1
+        mov     sp, fp
+        pop     fp
+        halt"#.to_string(),
+            machine_code_hex: "6a4c 21fa 8a00 8b03 9203 9300 0153 76c7\n\
+                              0000 00".to_string(),
+            machine_code_size: 17,
+            listing: r#"0000: 6A           push    fp
+0001: 4C           mov     fp, sp
+0002: 21 FA        add     sp, -6
+0004: 8A 00        sw      r0, 0(fp)
+0006: 8B 03        sw      r1, 3(fp)
+0008: 92 03        lw      r0, 3(fp)
+000A: 93 00        lw      r1, 0(fp)
+000C: 01           add     r0, r1
+000D: 53           mov     sp, fp
+000E: 76           pop     fp
+000F: C7 00 00 00  halt"#.to_string(),
+        },
+    ]
+}

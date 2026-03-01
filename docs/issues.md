@@ -57,6 +57,16 @@ Interrupt handling (iv, ir registers) is defined but not fully tested. The UART 
 
 ## Web UI
 
+### Rust Pipeline - Pre-built Examples Only
+
+The Rust tab currently shows pre-built examples demonstrating the Rust→WASM→COR24 pipeline. Live compilation requires:
+
+- **Server-side compilation**: Need a backend server running rustc with `wasm32-unknown-unknown` target and the wasm-to-cor24 translator
+- **WebSocket or HTTP API**: For sending Rust source and receiving compiled artifacts
+- **Docker container**: To sandbox compilation safely
+
+Currently using pre-built examples (LED Blink, Add Function) until server infrastructure is implemented.
+
 ### Memory Viewer
 
 - Only shows first 128 bytes

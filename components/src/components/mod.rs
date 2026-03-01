@@ -1,13 +1,19 @@
+mod collapsible;
 mod header;
 mod memory_viewer;
 mod modal;
 mod program_area;
 mod register_panel;
+mod rust_pipeline;
 mod sidebar;
+mod tab_bar;
 
+pub use collapsible::*;
 pub use header::*;
 pub use memory_viewer::*;
 pub use modal::*;
 pub use program_area::*;
 pub use register_panel::*;
+pub use rust_pipeline::*;
 pub use sidebar::*;
+pub use tab_bar::*;

@@ -752,3 +752,288 @@ table td {
     text-align: center;
     font-family: 'Monaco', monospace;
 }
+
+/* =============================================================================
+   Tab Bar Component
+   ============================================================================= */
+
+.tab-bar {
+    display: flex;
+    gap: 2px;
+    background: #0f3460;
+    padding: 4px;
+    border-radius: 5px;
+    margin-left: auto;
+}
+
+.tab-bar .tab {
+    padding: 6px 16px;
+    background: transparent;
+    color: #888;
+    border: none;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-bar .tab:hover {
+    color: #00d9ff;
+    background: rgba(0, 217, 255, 0.1);
+}
+
+.tab-bar .tab.active {
+    background: #00d9ff;
+    color: #1a1a2e;
+}
+
+/* Header with tabs */
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+header h1 {
+    flex: 1;
+}
+
+/* =============================================================================
+   Collapsible Component
+   ============================================================================= */
+
+.collapsible {
+    background: #16213e;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    border: 1px solid #0f3460;
+}
+
+.collapsible-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.collapsible-header:hover {
+    background: rgba(0, 217, 255, 0.1);
+}
+
+.collapsible-arrow {
+    color: #00d9ff;
+    margin-right: 10px;
+    font-size: 0.8em;
+    width: 12px;
+}
+
+.collapsible-title {
+    color: #00d9ff;
+    font-weight: bold;
+    font-size: 0.85em;
+    flex: 1;
+}
+
+.collapsible-badge {
+    background: #0f3460;
+    color: #888;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.collapsible-content.open {
+    max-height: 2000px;
+    padding: 0 12px 12px 12px;
+}
+
+/* =============================================================================
+   Rust Pipeline Component
+   ============================================================================= */
+
+.rust-pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.pipeline-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #16213e;
+    border-radius: 5px;
+}
+
+.pipeline-header label {
+    color: #888;
+    font-size: 0.85em;
+}
+
+.pipeline-header select {
+    flex: 1;
+    padding: 8px;
+    background: #0f3460;
+    color: #eee;
+    border: 1px solid #00d9ff;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+.run-pipeline-btn {
+    background: #4caf50;
+    color: white;
+    padding: 8px 20px;
+    font-size: 0.85em;
+}
+
+.run-pipeline-btn:hover {
+    background: #45a049;
+}
+
+.run-pipeline-btn:disabled {
+    background: #555;
+}
+
+.pipeline-stage {
+    background: #16213e;
+    border-radius: 5px;
+    padding: 12px;
+}
+
+.pipeline-stage h3 {
+    color: #00d9ff;
+    font-size: 0.85em;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #0f3460;
+}
+
+.code-block {
+    background: #0f3460;
+    padding: 12px;
+    border-radius: 3px;
+    font-family: 'Monaco', monospace;
+    font-size: 0.75em;
+    overflow-x: auto;
+    white-space: pre;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.rust-code {
+    color: #f8a5c2;
+}
+
+.asm-code {
+    color: #0f0;
+}
+
+.hex-dump {
+    color: #888;
+}
+
+.listing {
+    color: #0f0;
+}
+
+.execution-panel {
+    border: 2px solid #00d9ff;
+}
+
+.execution-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.led-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.led-label {
+    color: #888;
+    font-size: 0.85em;
+}
+
+.led-value {
+    color: #0f0;
+    font-family: 'Monaco', monospace;
+    font-size: 0.85em;
+}
+
+.cycle-count {
+    color: #888;
+    font-size: 0.85em;
+}
+
+.pipeline-note {
+    text-align: center;
+    color: #666;
+    font-size: 0.75em;
+    padding: 10px;
+}
+
+/* =============================================================================
+   Tab Content Areas
+   ============================================================================= */
+
+.tab-content {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+}
+
+.tab-content.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Assembler tab uses existing main-content layout */
+.assembler-tab {
+    display: grid;
+    grid-template-columns: 0.75fr 1.25fr;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Rust tab uses full width */
+.rust-tab {
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Hidden elements */
+.hidden {
+    display: none !important;
+}
+
+/* Rust tab content wrapper */
+.rust-tab-content {
+    flex: 1;
+    overflow: hidden;
+    margin-left: 160px; /* Space for fixed sidebar */
+    display: flex;
+    flex-direction: column;
+}
+
+.rust-tab-content.hidden {
+    display: none;
+}
