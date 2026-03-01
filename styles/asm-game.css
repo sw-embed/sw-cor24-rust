@@ -1082,6 +1082,42 @@ header h1 {
     color: #0f0;
 }
 
+/* Assembly listing with highlighting */
+.assembly-listing {
+    background: #0f3460;
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 12px;
+}
+
+.assembly-listing h4 {
+    color: #00d9ff;
+    font-size: 0.8em;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #16213e;
+}
+
+.listing-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'Monaco', monospace;
+    font-size: 0.75em;
+}
+
+.asm-line {
+    padding: 2px 8px;
+    color: #0f0;
+    white-space: pre;
+}
+
+.asm-line.current-line {
+    background: #00d9ff;
+    color: #1a1a2e;
+    font-weight: bold;
+    border-radius: 2px;
+}
+
 /* Two-column execution state */
 .execution-state {
     display: grid;

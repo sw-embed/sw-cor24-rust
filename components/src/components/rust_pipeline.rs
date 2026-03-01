@@ -30,6 +30,7 @@ pub struct RustCpuState {
     pub cycle_count: u32,
     pub memory_snapshot: Vec<u8>,
     pub current_instruction: String,
+    pub assembled_lines: Vec<String>,
 }
 
 #[derive(Properties, PartialEq)]
@@ -160,15 +161,36 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
                         }
                     </div>
 
-                    // Current instruction
-                    if props.is_loaded && !state.current_instruction.is_empty() {
-                        <div class="current-instruction">
-                            <span class="label">{"Next: "}</span>
-                            <code>{&state.current_instruction}</code>
+                    // Assembly listing with current line highlighted
+                    if props.is_loaded && !state.assembled_lines.is_empty() {
+                        <div class="assembly-listing">
+                            <h4>{"Assembly"}</h4>
+                            <div class="listing-scroll">
+                                {for state.assembled_lines.iter().map(|line| {
+                                    // Parse address from "ADDR: BYTES SOURCE" format
+                                    let is_current = if line.len() > 4 && line.chars().nth(4) == Some(':') {
+                                        if let Ok(addr) = u32::from_str_radix(&line[0..4], 16) {
+                                            addr == state.pc
+                                        } else {
+                                            false
+                                        }
+                                    } else {
+                                        false
+                                    };
+                                    let class = if is_current {
+                                        "asm-line current-line"
+                                    } else {
+                                        "asm-line"
+                                    };
+                                    html! {
+                                        <div class={class}>{line}</div>
+                                    }
+                                })}
+                            </div>
                         </div>
                     }
 
-                    // Two-column layout for registers and I/O
+                    // Three-column layout for registers, assembly, and I/O
                     <div class="execution-state">
                         // Left column: Registers
                         <div class="registers-panel">

@@ -219,52 +219,45 @@ pub fn app() -> Html {
         })
     };
 
-    // Helper to update rust_cpu_state from rust_cpu
-    let update_rust_cpu_state = {
-        let rust_cpu = rust_cpu.clone();
-        let rust_cpu_state = rust_cpu_state.clone();
-        move || {
-            let cpu = &*rust_cpu;
-            let regs = cpu.get_registers();
-            let mut registers = [0u32; 8];
-            for (i, &val) in regs.iter().enumerate().take(8) {
-                registers[i] = val;
-            }
-
-            // Get memory snapshot (stack area: last 64 bytes)
-            let mut memory_snapshot = Vec::new();
-            for addr in (0xFFFFC0..=0xFFFFFF).step_by(1) {
-                memory_snapshot.push(cpu.read_byte(addr as u32));
-            }
-
-            rust_cpu_state.set(RustCpuState {
-                registers,
-                pc: cpu.get_pc(),
-                condition_flag: cpu.get_condition_flag(),
-                is_halted: cpu.is_halted(),
-                led_value: cpu.get_led_value(),
-                cycle_count: cpu.get_cycle_count(),
-                memory_snapshot,
-                current_instruction: cpu.get_current_instruction(),
-            });
-        }
-    };
-
     // Rust pipeline: Load example
     let on_rust_load = {
         let rust_cpu = rust_cpu.clone();
+        let rust_cpu_state = rust_cpu_state.clone();
         let rust_is_loaded = rust_is_loaded.clone();
         let rust_loaded_example = rust_loaded_example.clone();
-        let update_state = update_rust_cpu_state.clone();
 
         Callback::from(move |example: RustExample| {
             let mut new_cpu = WasmCpu::new();
             // Assemble the COR24 assembly from the example
             if new_cpu.assemble(&example.cor24_assembly).is_ok() {
+                // Get assembled lines for display
+                let assembled_lines = new_cpu.get_assembled_lines();
+
+                let regs = new_cpu.get_registers();
+                let mut registers = [0u32; 8];
+                for (i, &val) in regs.iter().enumerate().take(8) {
+                    registers[i] = val;
+                }
+                let mut memory_snapshot = Vec::new();
+                for addr in (0xFFFFC0..=0xFFFFFF).step_by(1) {
+                    memory_snapshot.push(new_cpu.read_byte(addr as u32));
+                }
+
+                rust_cpu_state.set(RustCpuState {
+                    registers,
+                    pc: new_cpu.get_pc(),
+                    condition_flag: new_cpu.get_condition_flag(),
+                    is_halted: new_cpu.is_halted(),
+                    led_value: new_cpu.get_led_value(),
+                    cycle_count: new_cpu.get_cycle_count(),
+                    memory_snapshot,
+                    current_instruction: new_cpu.get_current_instruction(),
+                    assembled_lines,
+                });
+
                 rust_cpu.set(new_cpu);
                 rust_is_loaded.set(true);
                 rust_loaded_example.set(Some(example));
-                update_state();
             }
         })
     };
@@ -272,13 +265,35 @@ pub fn app() -> Html {
     // Rust pipeline: Step one instruction
     let on_rust_step = {
         let rust_cpu = rust_cpu.clone();
-        let update_state = update_rust_cpu_state.clone();
+        let rust_cpu_state = rust_cpu_state.clone();
 
         Callback::from(move |()| {
             let mut new_cpu = (*rust_cpu).clone();
+            let prev_state = (*rust_cpu_state).clone();
+
             if new_cpu.step().is_ok() {
+                let regs = new_cpu.get_registers();
+                let mut registers = [0u32; 8];
+                for (i, &val) in regs.iter().enumerate().take(8) {
+                    registers[i] = val;
+                }
+                let mut memory_snapshot = Vec::new();
+                for addr in (0xFFFFC0..=0xFFFFFF).step_by(1) {
+                    memory_snapshot.push(new_cpu.read_byte(addr as u32));
+                }
+
+                rust_cpu_state.set(RustCpuState {
+                    registers,
+                    pc: new_cpu.get_pc(),
+                    condition_flag: new_cpu.get_condition_flag(),
+                    is_halted: new_cpu.is_halted(),
+                    led_value: new_cpu.get_led_value(),
+                    cycle_count: new_cpu.get_cycle_count(),
+                    memory_snapshot,
+                    current_instruction: new_cpu.get_current_instruction(),
+                    assembled_lines: prev_state.assembled_lines,
+                });
                 rust_cpu.set(new_cpu);
-                update_state();
             }
         })
     };
@@ -294,6 +309,7 @@ pub fn app() -> Html {
             let cpu = rust_cpu.clone();
             let running = rust_is_running.clone();
             let state = rust_cpu_state.clone();
+            let asm_lines = (*state).assembled_lines.clone();
 
             // Run with animation using timer
             gloo::timers::callback::Timeout::new(50, move || {
@@ -301,6 +317,7 @@ pub fn app() -> Html {
                     cpu: yew::UseStateHandle<WasmCpu>,
                     running: yew::UseStateHandle<bool>,
                     state: yew::UseStateHandle<RustCpuState>,
+                    asm_lines: Vec<String>,
                     steps: u32,
                 ) {
                     let mut new_cpu = (*cpu).clone();
@@ -337,6 +354,7 @@ pub fn app() -> Html {
                         cycle_count: new_cpu.get_cycle_count(),
                         memory_snapshot,
                         current_instruction: new_cpu.get_current_instruction(),
+                        assembled_lines: asm_lines.clone(),
                     });
                     cpu.set(new_cpu.clone());
 
@@ -346,13 +364,14 @@ pub fn app() -> Html {
                         let cpu = cpu.clone();
                         let running = running.clone();
                         let state = state.clone();
+                        let asm_lines = asm_lines.clone();
                         gloo::timers::callback::Timeout::new(30, move || {
-                            run_step(cpu, running, state, steps + 10);
+                            run_step(cpu, running, state, asm_lines, steps + 10);
                         }).forget();
                     }
                 }
 
-                run_step(cpu, running, state, 0);
+                run_step(cpu, running, state, asm_lines, 0);
             }).forget();
         })
     };
@@ -360,15 +379,38 @@ pub fn app() -> Html {
     // Rust pipeline: Reset
     let on_rust_reset = {
         let rust_cpu = rust_cpu.clone();
+        let rust_cpu_state = rust_cpu_state.clone();
         let rust_loaded_example = rust_loaded_example.clone();
-        let update_state = update_rust_cpu_state.clone();
 
         Callback::from(move |()| {
             if let Some(example) = &*rust_loaded_example {
                 let mut new_cpu = WasmCpu::new();
                 if new_cpu.assemble(&example.cor24_assembly).is_ok() {
+                    let assembled_lines = new_cpu.get_assembled_lines();
+
+                    let regs = new_cpu.get_registers();
+                    let mut registers = [0u32; 8];
+                    for (i, &val) in regs.iter().enumerate().take(8) {
+                        registers[i] = val;
+                    }
+                    let mut memory_snapshot = Vec::new();
+                    for addr in (0xFFFFC0..=0xFFFFFF).step_by(1) {
+                        memory_snapshot.push(new_cpu.read_byte(addr as u32));
+                    }
+
+                    rust_cpu_state.set(RustCpuState {
+                        registers,
+                        pc: new_cpu.get_pc(),
+                        condition_flag: new_cpu.get_condition_flag(),
+                        is_halted: new_cpu.is_halted(),
+                        led_value: new_cpu.get_led_value(),
+                        cycle_count: new_cpu.get_cycle_count(),
+                        memory_snapshot,
+                        current_instruction: new_cpu.get_current_instruction(),
+                        assembled_lines,
+                    });
+
                     rust_cpu.set(new_cpu);
-                    update_state();
                 }
             }
         })
