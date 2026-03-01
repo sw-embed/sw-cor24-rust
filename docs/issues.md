@@ -2,24 +2,30 @@
 
 ## Assembler
 
-### Incomplete Instruction Encodings
+### ~~Incomplete Instruction Encodings~~ (RESOLVED)
 
-The assembler has incomplete instruction encodings. Many instructions won't assemble correctly because the decode ROM is not fully populated.
+**Status**: Fixed on 2026-02-28
 
-**Root Cause**: Instruction byte encodings were reverse-engineered from assembly listings (fib.lst, hello.lst, loadngo.lst, sieve.lst), but not all register/operand combinations are covered.
+The assembler now uses encoding tables generated from the decode ROM. All 211 valid instruction encodings from the hardware are now supported.
 
-**Affected Instructions**:
-- `sub ra,rb` - Only `sub sp,imm24` is implemented
-- `mul ra,rb` - Placeholder encoding only
-- `and`, `or`, `xor` - Limited register combinations
-- `shl`, `sra`, `srl` - Placeholder encodings
-- `ceq`, `cls`, `clu` - Limited register combinations
-- `lb`, `lbu`, `lw` - Only some base register combinations
-- `sb`, `sw` - Only some base register combinations
-- `jal` - Only `jal r1,(r0)` is implemented
-- `jmp` - Limited indirect register options
+**Implementation**:
+- `src/cpu/encode.rs` - Auto-generated encoding functions
+- `scripts/extract_decode_rom.py` - Generates both decode and encode tables
+- Assembler rewritten to use `encode::encode_*` functions
 
-**Solution**: Need to extract the full decode ROM from the Verilog source (cor24_cpu.v) or obtain additional documentation. The dis_rom.v file contains decode information that needs to be integrated.
+**Supported register combinations** (from hardware decode ROM):
+- `add ra,rb` - 12 combinations (r0-r2, fp)
+- `sub ra,rb` - 6 combinations (r0-r2)
+- `mul ra,rb` - 9 combinations (r0-r2)
+- `and/or/xor ra,rb` - 6 combinations each (r0-r2)
+- `shl/sra/srl ra,rb` - 6 combinations each (r0-r2)
+- `ceq/cls/clu ra,rb` - 6-9 combinations including z register
+- `lb/lbu/lw ra,offset(rb)` - 12 combinations each (r0-r2, fp)
+- `sb/sw ra,offset(rb)` - 9-12 combinations (r0-r2, fp)
+- `jal ra,(rb)` - 3 combinations
+- `jmp (ra)` - 4 combinations (r0-r2, r7)
+- `mov ra,rb` - 16 combinations
+- `push/pop ra` - 4 combinations (r0-r2, fp)
 
 ### Forward Reference Resolution
 
@@ -27,18 +33,17 @@ Branch forward references work but have a limited range (-128 to +127 bytes from
 
 ## Decode ROM
 
-### Missing Entries
+### ~~Missing Entries~~ (RESOLVED)
 
-The DecodeRom in `src/cpu/state.rs` only contains entries discovered from:
-- Assembly listing files
-- Verilog source analysis
+**Status**: Fixed on 2026-02-28
 
-Many valid instruction byte values will return `0xFFF` (invalid) because they haven't been mapped yet.
+The decode ROM has been fully extracted from `dis_rom.v` Verilog source using `scripts/extract_decode_rom.py`. The ROM now contains **211 valid instruction entries** (out of 256 possible byte values).
 
-**To Add More Entries**:
-1. Analyze additional .lst files for instruction encodings
-2. Cross-reference with dis_rom.v decode patterns
-3. Add entries to `DecodeRom::new()` in state.rs
+**Implementation**:
+- `src/cpu/decode_rom.rs` - Auto-generated const array
+- `scripts/extract_decode_rom.py` - Extraction script for regeneration
+
+The remaining 45 invalid entries (0xD3-0xFF) are genuinely undefined in the hardware.
 
 ## CPU Execution
 
@@ -95,12 +100,14 @@ Only one screenshot exists (`images/cor24-interface-2026-02-26T05-07-30-868Z.png
 
 ## Testing
 
-### No Unit Tests
+### Limited Unit Tests
 
-The project has minimal test coverage:
-- `src/assembler.rs` - 2 basic tests (lc, push/pop)
-- `src/cpu/state.rs` - 3 basic tests (new, memory ops, sign extend)
-- `src/cpu/executor.rs` - 2 basic tests (add_immediate, lc)
+The project has moderate test coverage (32 tests total):
+- `src/assembler.rs` - 17 tests (all instruction types)
+- `src/cpu/state.rs` - 3 tests (new, memory ops, sign extend)
+- `src/cpu/executor.rs` - 2 tests (add_immediate, lc)
+- `src/cpu/decode_rom.rs` - 5 tests (valid count, add, branch, push/pop, invalid)
+- `src/cpu/encode.rs` - 5 tests (add, push/pop, mov, branch, lc)
 
 **Missing Test Coverage**:
 - All instruction execution paths

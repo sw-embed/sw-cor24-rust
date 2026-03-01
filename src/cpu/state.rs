@@ -131,10 +131,9 @@ impl CpuState {
 
 /// Instruction decode ROM
 /// Maps 8-bit instruction bytes to 12-bit decoded values: [opcode(5):ra(3):rb(3)]
+/// Uses the const DECODE_ROM extracted from dis_rom.v
 #[derive(Clone)]
-pub struct DecodeRom {
-    entries: [u16; 256],
-}
+pub struct DecodeRom;
 
 impl Default for DecodeRom {
     fn default() -> Self {
@@ -143,104 +142,19 @@ impl Default for DecodeRom {
 }
 
 impl DecodeRom {
-    /// Create decode ROM with instruction mappings
+    /// Create decode ROM (uses static const array)
     pub fn new() -> Self {
-        let mut entries = [0xFFFu16; 256]; // Default to invalid
-
-        // Build decode table from known instruction encodings
-        // Format: entries[byte] = (opcode << 6) | (ra << 3) | rb
-
-        // Single-byte register operations (from listings analysis)
-        // add r0,r1 = 01, add r0,r2 = 02, etc.
-        // opcode=0x00=AddReg, ra=0, rb varies
-        for rb in 0..8u8 {
-            entries[rb as usize] = rb as u16; // add r0,rb
-        }
-
-        // cls ra,rb patterns (opcode=0x07=Cls)
-        entries[0x1A] = (0x07 << 6) | 2; // cls r0,r2 (ra=0, rb=2)
-        entries[0x1B] = (0x07 << 6) | (1 << 3); // cls r1,r0 (ra=1, rb=0)
-        entries[0x1D] = (0x07 << 6) | (2 << 3); // cls r2,r0 (ra=2, rb=0)
-
-        // jal and jmp patterns
-        entries[0x25] = (0x09 << 6) | (1 << 3); // jal r1,(r0) (ra=1, rb=0)
-        entries[0x27] = (0x0A << 6) | (1 << 3); // jmp (r1) (ra=1, rb=0)
-
-        // mov patterns (opcode=0x11=Mov)
-        entries[0x57] = (0x11 << 6) | 2; // mov r0,r2 (ra=0, rb=2)
-        entries[0x65] = (0x11 << 6) | (3 << 3) | 4; // mov fp,sp
-        entries[0x69] = (0x11 << 6) | (4 << 3) | 3; // mov sp,fp
-
-        // pop patterns (opcode=0x14=Pop, rb=4 for sp)
-        entries[0x78] = (0x14 << 6) | 4; // pop r0 (ra=0, rb=4)
-        entries[0x79] = (0x14 << 6) | 4; // pop r0 (alt?)
-        entries[0x7A] = (0x14 << 6) | (1 << 3) | 4; // pop r1
-        entries[0x7B] = (0x14 << 6) | (2 << 3) | 4; // pop r2
-        entries[0x7C] = (0x14 << 6) | (3 << 3) | 4; // pop fp
-
-        // push patterns (opcode=0x15=Push, rb=4 for sp)
-        entries[0x7D] = (0x15 << 6) | 4; // push r0 (ra=0, rb=4)
-        entries[0x7E] = (0x15 << 6) | (1 << 3) | 4; // push r1
-        entries[0x7F] = (0x15 << 6) | (2 << 3) | 4; // push r2
-        entries[0x80] = (0x15 << 6) | (3 << 3) | 4; // push fp
-
-        // clu patterns
-        entries[0xCE] = (0x08 << 6) | (5 << 3); // clu z,r0 (ra=5, rb=0)
-
-        // Two-byte instructions (first byte encodes opcode + ra)
-        // add ra,imm8: 08-0F range
-        for ra in 0..8u8 {
-            entries[(0x08 + ra) as usize] = (0x01 << 6) | ((ra as u16) << 3);
-        }
-
-        // bra/brf/brt: 13/14/15
-        entries[0x13] = 0x03 << 6; // bra (ra=0, rb=0)
-        entries[0x14] = 0x04 << 6; // brf (ra=0, rb=0)
-        entries[0x15] = 0x05 << 6; // brt (ra=0, rb=0)
-
-        // lc ra,imm8: 44-47 range
-        for ra in 0..8u8 {
-            entries[(0x44 + ra) as usize] = (0x0E << 6) | ((ra as u16) << 3);
-        }
-
-        // lcu ra,imm8: 3C-3F range
-        for ra in 0..8u8 {
-            entries[(0x3C + ra) as usize] = (0x0F << 6) | ((ra as u16) << 3);
-        }
-
-        // lb ra,dd(rb): various patterns
-        entries[0x2C] = 0x0C << 6; // lb r0,(r0) (ra=0, rb=0)
-        entries[0x2E] = (0x0C << 6) | 2; // lb r0,(r2) (ra=0, rb=2)
-
-        // lw ra,dd(rb): 4D, 51, 55 patterns
-        entries[0x4D] = (0x10 << 6) | 3; // lw r0,dd(fp) (ra=0, rb=3)
-        entries[0x51] = (0x10 << 6) | (1 << 3) | 3; // lw r1,dd(fp)
-        entries[0x55] = (0x10 << 6) | (2 << 3) | 3; // lw r2,dd(fp)
-
-        // sb ra,dd(rb): 82, 84 patterns
-        entries[0x82] = (0x16 << 6) | 2; // sb r0,(r2) (ra=0, rb=2)
-        entries[0x84] = (0x16 << 6) | (1 << 3); // sb r1,(r0) (ra=1, rb=0)
-
-        // sw ra,dd(rb): A6 pattern
-        entries[0xA6] = (0x1C << 6) | 3; // sw r0,dd(fp) (ra=0, rb=3)
-
-        // Four-byte instructions
-        // la ra,addr24: 29-2F range
-        for ra in 0..8u8 {
-            entries[(0x28 + ra) as usize] = (0x0B << 6) | ((ra as u16) << 3);
-        }
-
-        Self { entries }
+        Self
     }
 
     /// Decode an instruction byte
     pub fn decode(&self, byte: u8) -> u16 {
-        self.entries[byte as usize]
+        crate::cpu::decode_rom::DECODE_ROM[byte as usize]
     }
 
     /// Check if an instruction byte is valid
     pub fn is_valid(&self, byte: u8) -> bool {
-        self.entries[byte as usize] != 0xFFF
+        crate::cpu::decode_rom::DECODE_ROM[byte as usize] != 0xFFF
     }
 }
 

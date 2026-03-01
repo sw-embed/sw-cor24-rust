@@ -1,7 +1,10 @@
 //! COR24 assembler
 //!
 //! Parses COR24 assembly language and produces machine code.
+//! Uses encoding tables extracted from the hardware decode ROM.
 
+use crate::cpu::encode;
+use crate::cpu::instruction::Opcode;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -243,24 +246,24 @@ impl Assembler {
             "mul" => self.encode_mul(&operands, line_num),
 
             // Logic
-            "and" => self.encode_logic(&operands, 0x02, line_num),
-            "or" => self.encode_logic(&operands, 0x13, line_num),
-            "xor" => self.encode_logic(&operands, 0x1E, line_num),
+            "and" => self.encode_alu(&operands, Opcode::And, "and", line_num),
+            "or" => self.encode_alu(&operands, Opcode::Or, "or", line_num),
+            "xor" => self.encode_alu(&operands, Opcode::Xor, "xor", line_num),
 
             // Shifts
-            "shl" => self.encode_shift(&operands, 0x17, line_num),
-            "sra" => self.encode_shift(&operands, 0x18, line_num),
-            "srl" => self.encode_shift(&operands, 0x19, line_num),
+            "shl" => self.encode_alu(&operands, Opcode::Shl, "shl", line_num),
+            "sra" => self.encode_alu(&operands, Opcode::Sra, "sra", line_num),
+            "srl" => self.encode_alu(&operands, Opcode::Srl, "srl", line_num),
 
             // Compares
-            "ceq" => self.encode_compare(&operands, "ceq", line_num),
-            "cls" => self.encode_compare(&operands, "cls", line_num),
-            "clu" => self.encode_compare(&operands, "clu", line_num),
+            "ceq" => self.encode_alu(&operands, Opcode::Ceq, "ceq", line_num),
+            "cls" => self.encode_alu(&operands, Opcode::Cls, "cls", line_num),
+            "clu" => self.encode_alu(&operands, Opcode::Clu, "clu", line_num),
 
             // Branches
-            "bra" => self.encode_branch(&operands, 0x13, line_num),
-            "brf" => self.encode_branch(&operands, 0x14, line_num),
-            "brt" => self.encode_branch(&operands, 0x15, line_num),
+            "bra" => self.encode_branch(&operands, Opcode::Bra, line_num),
+            "brf" => self.encode_branch(&operands, Opcode::Brf, line_num),
+            "brt" => self.encode_branch(&operands, Opcode::Brt, line_num),
 
             // Jumps
             "jmp" => self.encode_jmp(&operands, line_num),
@@ -270,17 +273,17 @@ impl Assembler {
             "la" => self.encode_la(&operands, line_num),
             "lc" => self.encode_lc(&operands, false, line_num),
             "lcu" => self.encode_lc(&operands, true, line_num),
-            "lb" => self.encode_load_store(&operands, 0x0C, false, line_num),
-            "lbu" => self.encode_load_store(&operands, 0x0D, false, line_num),
-            "lw" => self.encode_load_store(&operands, 0x10, false, line_num),
+            "lb" => self.encode_load_store(&operands, Opcode::Lb, "lb", line_num),
+            "lbu" => self.encode_load_store(&operands, Opcode::Lbu, "lbu", line_num),
+            "lw" => self.encode_load_store(&operands, Opcode::Lw, "lw", line_num),
 
             // Store operations
-            "sb" => self.encode_load_store(&operands, 0x16, true, line_num),
-            "sw" => self.encode_load_store(&operands, 0x1C, true, line_num),
+            "sb" => self.encode_load_store(&operands, Opcode::Sb, "sb", line_num),
+            "sw" => self.encode_load_store(&operands, Opcode::Sw, "sw", line_num),
 
             // Extensions
-            "sxt" => self.encode_extension(&operands, 0xB0, line_num),
-            "zxt" => self.encode_extension(&operands, 0xF0, line_num),
+            "sxt" => self.encode_alu(&operands, Opcode::Sxt, "sxt", line_num),
+            "zxt" => self.encode_alu(&operands, Opcode::Zxt, "zxt", line_num),
 
             // Pseudo-instructions
             "halt" => vec![0x00], // Jump to address 0 (infinite loop)
@@ -305,10 +308,9 @@ impl Assembler {
             "r2" => Some(2),
             "r3" | "fp" => Some(3),
             "r4" | "sp" => Some(4),
-            "r5" | "z" => Some(5),
+            "r5" | "z" | "c" => Some(5), // z register, also condition flag
             "r6" | "iv" => Some(6),
             "r7" | "ir" => Some(7),
-            "c" => Some(5), // Condition flag accessed as r5 in mov
             _ => None,
         }
     }
@@ -332,8 +334,16 @@ impl Assembler {
         }
 
         if let Some(ra) = self.parse_register(operands[0]) {
-            // push r0=7D, r1=7E, r2=7F, fp=80
-            vec![0x7D + ra]
+            if let Some(byte) = encode::encode_push(ra) {
+                vec![byte]
+            } else {
+                self.errors.push(format!(
+                    "Line {}: push {} not supported",
+                    line_num + 1,
+                    operands[0]
+                ));
+                vec![]
+            }
         } else {
             self.errors.push(format!(
                 "Line {}: Invalid register '{}'",
@@ -352,8 +362,16 @@ impl Assembler {
         }
 
         if let Some(ra) = self.parse_register(operands[0]) {
-            // pop r0=78, r1=7A, r2=7B, fp=7C (r0 uses different encoding)
-            if ra == 0 { vec![0x78] } else { vec![0x79 + ra] }
+            if let Some(byte) = encode::encode_pop(ra) {
+                vec![byte]
+            } else {
+                self.errors.push(format!(
+                    "Line {}: pop {} not supported",
+                    line_num + 1,
+                    operands[0]
+                ));
+                vec![]
+            }
         } else {
             self.errors.push(format!(
                 "Line {}: Invalid register '{}'",
@@ -376,16 +394,16 @@ impl Assembler {
 
         match (ra, rb) {
             (Some(ra), Some(rb)) => {
-                // Common mov encodings
-                match (ra, rb) {
-                    (3, 4) => vec![0x65], // mov fp,sp
-                    (4, 3) => vec![0x69], // mov sp,fp
-                    (0, 2) => vec![0x57], // mov r0,r2
-                    (0, 5) => vec![0x62], // mov r0,c (c accessed as r5)
-                    _ => {
-                        // Generic encoding: 0x50 + (ra << 3) + rb (approximation)
-                        vec![0x50 + (ra << 3) + rb]
-                    }
+                if let Some(byte) = encode::encode_mov(ra, rb) {
+                    vec![byte]
+                } else {
+                    self.errors.push(format!(
+                        "Line {}: mov {},{} not supported",
+                        line_num + 1,
+                        operands[0],
+                        operands[1]
+                    ));
+                    vec![]
                 }
             }
             _ => {
@@ -409,7 +427,16 @@ impl Assembler {
         if let Some(imm) = self.parse_number(operands[1]) {
             // add ra,imm
             if let Some(ra) = ra {
-                vec![0x08 + ra, imm as u8]
+                if let Some(byte) = encode::encode_add_imm(ra) {
+                    vec![byte, imm as u8]
+                } else {
+                    self.errors.push(format!(
+                        "Line {}: add {},imm not supported",
+                        line_num + 1,
+                        operands[0]
+                    ));
+                    vec![]
+                }
             } else {
                 self.errors
                     .push(format!("Line {}: Invalid register", line_num + 1));
@@ -418,11 +445,16 @@ impl Assembler {
         } else if let Some(rb) = self.parse_register(operands[1]) {
             // add ra,rb
             if let Some(ra) = ra {
-                if ra == 0 {
-                    vec![rb] // add r0,rb encoded as just rb
+                if let Some(byte) = encode::encode_add_reg(ra, rb) {
+                    vec![byte]
                 } else {
-                    // Other add encodings
-                    vec![(ra << 3) + rb]
+                    self.errors.push(format!(
+                        "Line {}: add {},{} not supported",
+                        line_num + 1,
+                        operands[0],
+                        operands[1]
+                    ));
+                    vec![]
                 }
             } else {
                 self.errors
@@ -437,7 +469,6 @@ impl Assembler {
     }
 
     fn encode_sub(&mut self, operands: &[&str], line_num: usize) -> Vec<u8> {
-        // For now, simple sub ra,rb encoding
         if operands.len() < 2 {
             self.errors
                 .push(format!("Line {}: sub requires two operands", line_num + 1));
@@ -448,18 +479,40 @@ impl Assembler {
         if operands[0].to_lowercase() == "sp"
             && let Some(imm) = self.parse_number(operands[1])
         {
-            // sub sp,dddddd (4 bytes)
-            return vec![
-                0xD8, // sub sp encoding
-                (imm & 0xFF) as u8,
-                ((imm >> 8) & 0xFF) as u8,
-                ((imm >> 16) & 0xFF) as u8,
-            ];
+            if let Some(byte) = encode::encode_sub_sp() {
+                return vec![
+                    byte,
+                    (imm & 0xFF) as u8,
+                    ((imm >> 8) & 0xFF) as u8,
+                    ((imm >> 16) & 0xFF) as u8,
+                ];
+            }
         }
 
-        self.errors
-            .push(format!("Line {}: sub not fully implemented", line_num + 1));
-        vec![]
+        // sub ra,rb
+        let ra = self.parse_register(operands[0]);
+        let rb = self.parse_register(operands[1]);
+
+        match (ra, rb) {
+            (Some(ra), Some(rb)) => {
+                if let Some(byte) = encode::encode_instruction(Opcode::Sub, ra, rb) {
+                    vec![byte]
+                } else {
+                    self.errors.push(format!(
+                        "Line {}: sub {},{} not supported",
+                        line_num + 1,
+                        operands[0],
+                        operands[1]
+                    ));
+                    vec![]
+                }
+            }
+            _ => {
+                self.errors
+                    .push(format!("Line {}: Invalid sub operands", line_num + 1));
+                vec![]
+            }
+        }
     }
 
     fn encode_mul(&mut self, operands: &[&str], line_num: usize) -> Vec<u8> {
@@ -468,15 +521,45 @@ impl Assembler {
                 .push(format!("Line {}: mul requires two operands", line_num + 1));
             return vec![];
         }
-        // Placeholder
-        vec![0x90]
+
+        let ra = self.parse_register(operands[0]);
+        let rb = self.parse_register(operands[1]);
+
+        match (ra, rb) {
+            (Some(ra), Some(rb)) => {
+                if let Some(byte) = encode::encode_instruction(Opcode::Mul, ra, rb) {
+                    vec![byte]
+                } else {
+                    self.errors.push(format!(
+                        "Line {}: mul {},{} not supported",
+                        line_num + 1,
+                        operands[0],
+                        operands[1]
+                    ));
+                    vec![]
+                }
+            }
+            _ => {
+                self.errors
+                    .push(format!("Line {}: Invalid mul operands", line_num + 1));
+                vec![]
+            }
+        }
     }
 
-    fn encode_logic(&mut self, operands: &[&str], _base_opcode: u8, line_num: usize) -> Vec<u8> {
+    /// Generic ALU instruction encoding (and, or, xor, shifts, compares, etc.)
+    fn encode_alu(
+        &mut self,
+        operands: &[&str],
+        opcode: Opcode,
+        mnemonic: &str,
+        line_num: usize,
+    ) -> Vec<u8> {
         if operands.len() < 2 {
             self.errors.push(format!(
-                "Line {}: logic op requires two operands",
-                line_num + 1
+                "Line {}: {} requires two operands",
+                line_num + 1,
+                mnemonic
             ));
             return vec![];
         }
@@ -485,63 +568,32 @@ impl Assembler {
         let rb = self.parse_register(operands[1]);
 
         match (ra, rb) {
-            (Some(0), Some(1)) => vec![0x0D], // and r0,r1
-            (Some(0), Some(2)) => vec![0x0E], // and r0,r2 (approximate)
-            _ => {
-                self.errors.push(format!(
-                    "Line {}: Logic operation encoding not found",
-                    line_num + 1
-                ));
-                vec![]
+            (Some(ra), Some(rb)) => {
+                if let Some(byte) = encode::encode_instruction(opcode, ra, rb) {
+                    vec![byte]
+                } else {
+                    self.errors.push(format!(
+                        "Line {}: {} {},{} not supported",
+                        line_num + 1,
+                        mnemonic,
+                        operands[0],
+                        operands[1]
+                    ));
+                    vec![]
+                }
             }
-        }
-    }
-
-    fn encode_shift(&mut self, operands: &[&str], _opcode: u8, line_num: usize) -> Vec<u8> {
-        if operands.len() < 2 {
-            self.errors.push(format!(
-                "Line {}: shift requires two operands",
-                line_num + 1
-            ));
-            return vec![];
-        }
-        // Placeholder
-        vec![0xB0]
-    }
-
-    fn encode_compare(&mut self, operands: &[&str], cmp_type: &str, line_num: usize) -> Vec<u8> {
-        if operands.len() < 2 {
-            self.errors.push(format!(
-                "Line {}: compare requires two operands",
-                line_num + 1
-            ));
-            return vec![];
-        }
-
-        let ra = self.parse_register(operands[0]);
-        let rb = self.parse_register(operands[1]);
-
-        match (ra, rb, cmp_type) {
-            (Some(0), Some(1), "ceq") => vec![0x16],
-            (Some(0), Some(2), "ceq") => vec![0x17],
-            (Some(2), Some(0), "cls") => vec![0x1D],
-            (Some(1), Some(0), "cls") => vec![0x1B],
-            (Some(0), Some(5), "cls") => vec![0xCB], // cls r0,z
-            (Some(5), Some(0), "clu") => vec![0xCE], // clu z,r0
             _ => {
                 self.errors.push(format!(
-                    "Line {}: Compare encoding not found for {} {:?},{:?}",
+                    "Line {}: Invalid {} operands",
                     line_num + 1,
-                    cmp_type,
-                    ra,
-                    rb
+                    mnemonic
                 ));
                 vec![]
             }
         }
     }
 
-    fn encode_branch(&mut self, operands: &[&str], opcode: u8, line_num: usize) -> Vec<u8> {
+    fn encode_branch(&mut self, operands: &[&str], opcode: Opcode, line_num: usize) -> Vec<u8> {
         if operands.is_empty() {
             self.errors
                 .push(format!("Line {}: branch requires target", line_num + 1));
@@ -549,6 +601,7 @@ impl Assembler {
         }
 
         let target = operands[0].trim();
+        let first_byte = encode::encode_branch(opcode).unwrap_or(0x13);
 
         // Check if it's a label
         if let Some(&addr) = self.labels.get(target) {
@@ -560,10 +613,10 @@ impl Assembler {
                     .push(format!("Line {}: Branch target too far", line_num + 1));
                 return vec![];
             }
-            vec![opcode, offset as u8]
+            vec![first_byte, offset as u8]
         } else if let Some(imm) = self.parse_number(target) {
             // Direct offset
-            vec![opcode, imm as u8]
+            vec![first_byte, imm as u8]
         } else {
             // Forward reference
             self.forward_refs.push(ForwardRef {
@@ -572,7 +625,7 @@ impl Assembler {
                 ref_type: RefType::Relative8,
                 line_num,
             });
-            vec![opcode, 0x00] // Placeholder
+            vec![first_byte, 0x00] // Placeholder
         }
     }
 
@@ -589,11 +642,16 @@ impl Assembler {
         if target.starts_with('(') && target.ends_with(')') {
             let reg = &target[1..target.len() - 1];
             if let Some(ra) = self.parse_register(reg) {
-                return match ra {
-                    1 => vec![0x27], // jmp (r1)
-                    7 => vec![0x2F], // jmp (ir)
-                    _ => vec![0x20 + ra],
-                };
+                if let Some(byte) = encode::encode_jmp(ra) {
+                    return vec![byte];
+                } else {
+                    self.errors.push(format!(
+                        "Line {}: jmp ({}) not supported",
+                        line_num + 1,
+                        reg
+                    ));
+                    return vec![];
+                }
             }
         }
 
@@ -615,11 +673,18 @@ impl Assembler {
         // Parse (rb) syntax
         if rb_str.starts_with('(') && rb_str.ends_with(')') {
             let reg = &rb_str[1..rb_str.len() - 1];
-            if let Some(rb) = self.parse_register(reg)
-                && ra == Some(1)
-                && rb == 0
-            {
-                return vec![0x25]; // jal r1,(r0)
+            if let (Some(ra), Some(rb)) = (ra, self.parse_register(reg)) {
+                if let Some(byte) = encode::encode_jal(ra, rb) {
+                    return vec![byte];
+                } else {
+                    self.errors.push(format!(
+                        "Line {}: jal {},({}) not supported",
+                        line_num + 1,
+                        operands[0],
+                        reg
+                    ));
+                    return vec![];
+                }
             }
         }
 
@@ -641,33 +706,40 @@ impl Assembler {
         let target = operands[1].trim();
 
         if let Some(ra) = ra {
-            let opcode = 0x28 + ra; // la r0=0x28, r1=0x29, r2=0x2A, etc.
-
-            if let Some(addr) = self.parse_number(target) {
-                // Immediate address
-                return vec![
-                    opcode,
-                    (addr & 0xFF) as u8,
-                    ((addr >> 8) & 0xFF) as u8,
-                    ((addr >> 16) & 0xFF) as u8,
-                ];
-            } else if let Some(&addr) = self.labels.get(target) {
-                // Known label
-                return vec![
-                    opcode,
-                    (addr & 0xFF) as u8,
-                    ((addr >> 8) & 0xFF) as u8,
-                    ((addr >> 16) & 0xFF) as u8,
-                ];
+            if let Some(first_byte) = encode::encode_la(ra) {
+                if let Some(addr) = self.parse_number(target) {
+                    // Immediate address
+                    return vec![
+                        first_byte,
+                        (addr & 0xFF) as u8,
+                        ((addr >> 8) & 0xFF) as u8,
+                        ((addr >> 16) & 0xFF) as u8,
+                    ];
+                } else if let Some(&addr) = self.labels.get(target) {
+                    // Known label
+                    return vec![
+                        first_byte,
+                        (addr & 0xFF) as u8,
+                        ((addr >> 8) & 0xFF) as u8,
+                        ((addr >> 16) & 0xFF) as u8,
+                    ];
+                } else {
+                    // Forward reference
+                    self.forward_refs.push(ForwardRef {
+                        address: self.address + 1,
+                        label: target.to_string(),
+                        ref_type: RefType::Absolute24,
+                        line_num,
+                    });
+                    return vec![first_byte, 0x00, 0x00, 0x00];
+                }
             } else {
-                // Forward reference
-                self.forward_refs.push(ForwardRef {
-                    address: self.address + 1,
-                    label: target.to_string(),
-                    ref_type: RefType::Absolute24,
-                    line_num,
-                });
-                return vec![opcode, 0x00, 0x00, 0x00];
+                self.errors.push(format!(
+                    "Line {}: la {} not supported",
+                    line_num + 1,
+                    operands[0]
+                ));
+                return vec![];
             }
         }
 
@@ -690,9 +762,18 @@ impl Assembler {
 
         match (ra, imm) {
             (Some(ra), Some(imm)) => {
-                // lc ra,dd: 0x44+ra for signed, 0x3C+ra for unsigned
-                let opcode = if unsigned { 0x3C + ra } else { 0x44 + ra };
-                vec![opcode, imm as u8]
+                if let Some(first_byte) = encode::encode_lc(ra, unsigned) {
+                    vec![first_byte, imm as u8]
+                } else {
+                    let mnemonic = if unsigned { "lcu" } else { "lc" };
+                    self.errors.push(format!(
+                        "Line {}: {} {} not supported",
+                        line_num + 1,
+                        mnemonic,
+                        operands[0]
+                    ));
+                    vec![]
+                }
             }
             _ => {
                 self.errors
@@ -705,14 +786,15 @@ impl Assembler {
     fn encode_load_store(
         &mut self,
         operands: &[&str],
-        _opcode: u8,
-        _is_store: bool,
+        opcode: Opcode,
+        mnemonic: &str,
         line_num: usize,
     ) -> Vec<u8> {
         if operands.len() < 2 {
             self.errors.push(format!(
-                "Line {}: load/store requires operands",
-                line_num + 1
+                "Line {}: {} requires operands",
+                line_num + 1,
+                mnemonic
             ));
             return vec![];
         }
@@ -733,45 +815,27 @@ impl Assembler {
             let rb = self.parse_register(rb_str);
 
             if let (Some(ra), Some(rb), Some(offset)) = (ra, rb, offset) {
-                // Simplified encoding - would need full ROM decode
-                // lw r0,dd(fp) = 0x4D, lw r1,dd(fp) = 0x51, etc.
-                if rb == 3 {
-                    // fp
-                    let base = 0x4D + (ra * 4);
-                    return vec![base, offset as u8];
+                if let Some(first_byte) = encode::encode_load_store(opcode, ra, rb) {
+                    return vec![first_byte, offset as u8];
+                } else {
+                    self.errors.push(format!(
+                        "Line {}: {} {},{} not supported",
+                        line_num + 1,
+                        mnemonic,
+                        operands[0],
+                        operands[1]
+                    ));
+                    return vec![];
                 }
-                // Default encoding attempt
-                return vec![0x4D, offset as u8];
             }
         }
 
-        self.errors
-            .push(format!("Line {}: Invalid load/store syntax", line_num + 1));
+        self.errors.push(format!(
+            "Line {}: Invalid {} syntax",
+            line_num + 1,
+            mnemonic
+        ));
         vec![]
-    }
-
-    fn encode_extension(&mut self, operands: &[&str], base: u8, line_num: usize) -> Vec<u8> {
-        if operands.len() < 2 {
-            self.errors.push(format!(
-                "Line {}: extension requires two operands",
-                line_num + 1
-            ));
-            return vec![];
-        }
-
-        let ra = self.parse_register(operands[0]);
-        let rb = self.parse_register(operands[1]);
-
-        match (ra, rb) {
-            (Some(ra), Some(rb)) => {
-                vec![base + (ra << 3) + rb]
-            }
-            _ => {
-                self.errors
-                    .push(format!("Line {}: Invalid extension operands", line_num + 1));
-                vec![]
-            }
-        }
     }
 
     fn resolve_forward_refs(&mut self) {
@@ -822,7 +886,7 @@ mod tests {
     fn test_simple_assembly() {
         let mut asm = Assembler::new();
         let result = asm.assemble("lc r0,42");
-        assert!(result.errors.is_empty());
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
         assert_eq!(result.bytes, vec![0x44, 42]);
     }
 
@@ -830,7 +894,127 @@ mod tests {
     fn test_push_pop() {
         let mut asm = Assembler::new();
         let result = asm.assemble("push r0\npop r1");
-        assert!(result.errors.is_empty());
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
         assert_eq!(result.bytes, vec![0x7D, 0x7A]);
+    }
+
+    #[test]
+    fn test_add_register() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("add r0,r1\nadd r1,r2");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x01, 0x05]);
+    }
+
+    #[test]
+    fn test_add_immediate() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("add r0,10");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x09, 10]);
+    }
+
+    #[test]
+    fn test_mov() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("mov fp,sp\nmov sp,fp");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x65, 0x69]);
+    }
+
+    #[test]
+    fn test_load_word() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("lw r0,4(fp)");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x4D, 4]);
+    }
+
+    #[test]
+    fn test_store_word() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("sw r1,8(fp)");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0xAA, 8]);
+    }
+
+    #[test]
+    fn test_sub_register() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("sub r0,r1");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x9C]);
+    }
+
+    #[test]
+    fn test_mul() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("mul r0,r1");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x6B]);
+    }
+
+    #[test]
+    fn test_logic_ops() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("and r0,r1\nor r1,r2\nxor r0,r2");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x0D, 0x76, 0xB9]);
+    }
+
+    #[test]
+    fn test_shifts() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("shl r0,r1\nsra r1,r0\nsrl r2,r1");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x8A, 0x92, 0x9B]);
+    }
+
+    #[test]
+    fn test_compare() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("ceq r0,r1\ncls r1,r0");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x16, 0x1B]);
+    }
+
+    #[test]
+    fn test_branch() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("bra 10\nbrf -5\nbrt 0");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x13, 10, 0x14, 0xFB, 0x15, 0]);
+    }
+
+    #[test]
+    fn test_jmp() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("jmp (r0)\njmp (r1)");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x26, 0x27]);
+    }
+
+    #[test]
+    fn test_jal() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("jal r1,(r0)");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x25]);
+    }
+
+    #[test]
+    fn test_la() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("la r0,0x1234");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0x29, 0x34, 0x12, 0x00]);
+    }
+
+    #[test]
+    fn test_extensions() {
+        let mut asm = Assembler::new();
+        let result = asm.assemble("sxt r0,r1\nzxt r1,r2");
+        assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
+        assert_eq!(result.bytes, vec![0xB0, 0xC3]);
     }
 }
