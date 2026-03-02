@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COR24 C-Oriented RISC, 24-bit - Assembly Emulator</title>
+    
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="/cor24-rs/asm-game-20fa9f054bd256ee.css" integrity="sha384-Ds5K1m8QobOwZkdGr3neCemAxNobzezlKIwQ1vIs8GK85bMz6MCyBOICFRnuKKiV"/>
+    <link rel="stylesheet" href="/cor24-rs/layout-d0295e268d6a5d91.css" integrity="sha384-MBR4VROHYRQLCpjLcmvfN6yEbU0hYTMfyUPUAN/ecgCNUhjpIDJHQzgnB2FLdXu3"/>
+    
+<script type="module">
+import init, * as bindings from '/cor24-rs/cor24-emulator-f68867f7c6dce9a1.js';
+const wasm = await init({ module_or_path: '/cor24-rs/cor24-emulator-f68867f7c6dce9a1_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+<link rel="modulepreload" href="/cor24-rs/cor24-emulator-f68867f7c6dce9a1.js" crossorigin="anonymous" integrity="sha384-PBPW39jXtEHNzN8Dkly59VJNo+bFqEEHrq5O6VwHrqB4yRMBKZ/dVEwIaMEXGZbQ"><link rel="preload" href="/cor24-rs/cor24-emulator-f68867f7c6dce9a1_bg.wasm" crossorigin="anonymous" integrity="sha384-So8KoMkdTALJp5PW7QGYuXjzP67mxmPXbvB/gWS/yVOKgdoCCAk4qtP5lHjeF0hk" as="fetch" type="application/wasm"></head>
+<body>
+</body>
+</html>
