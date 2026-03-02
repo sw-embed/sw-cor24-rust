@@ -570,7 +570,7 @@ pub fn app() -> Html {
 
     html! {
         <div class="container">
-            <Header title="COR24 C-Oriented RISC Assembly Emulator">
+            <Header title="COR24 C-Oriented RISC, 24-bit - Assembly Emulator">
                 <TabBar tabs={tabs} active_tab={(*active_tab).clone()} on_tab_change={on_tab_change} />
             </Header>
 
