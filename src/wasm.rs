@@ -115,11 +115,7 @@ impl WasmCpu {
     pub fn run_batch(&mut self, max_instructions: u32) -> bool {
         self.emu.resume();
         let result = self.emu.run_batch(max_instructions as u64);
-        match result.reason {
-            crate::emulator::StopReason::Halted => false,
-            crate::emulator::StopReason::InvalidInstruction(_) => false,
-            _ => true,
-        }
+        !matches!(result.reason, crate::emulator::StopReason::Halted | crate::emulator::StopReason::InvalidInstruction(_))
     }
 
     /// Run until halt or error

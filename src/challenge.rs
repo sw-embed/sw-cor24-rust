@@ -246,49 +246,70 @@ halt:   bra     halt
             "Memory-mapped I/O: Control LEDs at address 0xFF0000.".to_string(),
             r#"; Example 9: LED Blink
 ; COR24 uses memory-mapped I/O
-; LEDs at 0xFF0000 (write), Switches at 0xFF0000 (read)
+; LED D2 at 0xFF0000 (write bit 0)
 ;
-; This program cycles through LED patterns.
-; Click Step repeatedly to watch LEDs change!
-; Toggle switches in the I/O panel to see input.
+; Blinks LED on and off with nested delay.
+; Click Run to watch the LED blink!
 
-        la      r1,0xFF0000 ; I/O address (LEDSWDAT)
-        lc      r0,1        ; Start with LED 0
+        la      r1,0xFF0000
 
 loop:
-        sb      r0,0(r1)    ; Write to LEDs
-
-        ; Shift LED pattern left
-        lc      r2,1
-        shl     r0,r2
-
-        ; Check if we've shifted past bit 7
-        lcu     r2,128      ; 0x80
-        clu     r2,r0       ; C = (128 < pattern)?
-        brf     loop        ; If not overflowed, continue
-
-        ; Reset to LED 0
         lc      r0,1
+        sb      r0,0(r1)
+
+        push    r1
+        lc      r1,10
+delay1: lc      r2,0
+wait1:  lc      r0,1
+        add     r2,r0
+        lc      r0,127
+        clu     r2,r0
+        brt     wait1
+        lc      r0,1
+        sub     r1,r0
+        ceq     r1,z
+        brf     delay1
+        pop     r1
+
+        lc      r0,0
+        sb      r0,0(r1)
+
+        push    r1
+        lc      r1,10
+delay2: lc      r2,0
+wait2:  lc      r0,1
+        add     r2,r0
+        lc      r0,127
+        clu     r2,r0
+        brt     wait2
+        lc      r0,1
+        sub     r1,r0
+        ceq     r1,z
+        brf     delay2
+        pop     r1
+
         bra     loop
 
-halt:   bra     halt        ; Never reached
+halt:   bra     halt
 "#
             .to_string(),
         ),
         (
             "Button Echo (blinky)".to_string(),
             "LED D2 follows button S2 - matches COR24-TB hardware demo.".to_string(),
-            r#"; Example 10: Button Echo (blinky)
-; LED D2 follows button S2
+            r#"; Example 10: Button Echo
+; LED D2 lights when button S2 is pressed
 ; Click S2 button in I/O panel while running
 ;
-; Matches reference blinky.c: *ledsw = *ledsw
-; Hardware: S2 = bit 0 read, D2 = bit 0 write
+; S2 is active-low (normally 1, pressed = 0)
+; We invert with XOR so LED on = button pressed
 
         la      r1,0xFF0000 ; I/O address (LEDSWDAT)
+        lc      r2,1        ; Bit mask for XOR
 
 loop:
-        lb      r0,0(r1)    ; Read button S2 (bit 0)
+        lb      r0,0(r1)    ; Read button S2 (bit 0: 1=released, 0=pressed)
+        xor     r0,r2       ; Invert: pressed(0)->1(LED on), released(1)->0(LED off)
         sb      r0,0(r1)    ; Write to LED D2 (bit 0)
 
         bra     loop        ; Keep polling

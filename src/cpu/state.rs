@@ -72,7 +72,7 @@ impl IoState {
     pub fn new() -> Self {
         Self {
             leds: 0,
-            switches: 0x01, // Button S2 normally high
+            switches: 0x01, // S2 normally high (low = pressed)
             uart_tx: 0,
             uart_tx_busy: false, // TX starts ready
             uart_rx: 0,

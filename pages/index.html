@@ -6,12 +6,12 @@
     <title>MakerLisp COR24 — Assembly Emulator</title>
     
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="/cor24-rs/asm-game-d464ad3fd59b23f6.css" integrity="sha384-KvX7NdPT9A+F900jN+LbOokhNjccP26U9G5VlIfKiJlnBOO/9L7YPCYzVtqGrRrB"/>
-    <link rel="stylesheet" href="/cor24-rs/layout-d0295e268d6a5d91.css" integrity="sha384-MBR4VROHYRQLCpjLcmvfN6yEbU0hYTMfyUPUAN/ecgCNUhjpIDJHQzgnB2FLdXu3"/>
+    <link rel="stylesheet" href="/cor24-rs/asm-game-77fdf7541e4d7590.css" integrity="sha384-/dDLF2PwR2QX4l8DEhFzkkbKSV7ZoL87hxmqgV9x9GIygGUZWaNIRkzl4OBDDldZ"/>
+    <link rel="stylesheet" href="/cor24-rs/layout-9fd9e876d949d990.css" integrity="sha384-bGVP+p1gPnUBawcOwOmAHa5oixWPIfXiYaIpfekIAx79AOeNgDqCHiNV7VJW7NQf"/>
     
 <script type="module">
-import init, * as bindings from '/cor24-rs/cor24-emulator-360875b9c4ea5a91.js';
-const wasm = await init({ module_or_path: '/cor24-rs/cor24-emulator-360875b9c4ea5a91_bg.wasm' });
+import init, * as bindings from '/cor24-rs/cor24-emulator-f59b3bd45536b895.js';
+const wasm = await init({ module_or_path: '/cor24-rs/cor24-emulator-f59b3bd45536b895_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -20,7 +20,7 @@ window.wasmBindings = bindings;
 dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 </script>
-<link rel="modulepreload" href="/cor24-rs/cor24-emulator-360875b9c4ea5a91.js" crossorigin="anonymous" integrity="sha384-pcmUGp36snp24MXSDmszgPHfOPmkC+l/voon/A2OZ+rMiOB+znnSkIc+Vr238RVN"><link rel="preload" href="/cor24-rs/cor24-emulator-360875b9c4ea5a91_bg.wasm" crossorigin="anonymous" integrity="sha384-zh+HQ9Y+LhYXS5x5U9/YomeJ9ewl+dJev5hqZOUC0x16KaTEL8491NqsGAKBhIE1" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/cor24-rs/cor24-emulator-f59b3bd45536b895.js" crossorigin="anonymous" integrity="sha384-b2yTtgeEroTU+34he/O8DMiIRgGyxFXP7FWh8AQurxptYtO9cukttkLVW9momNtQ"><link rel="preload" href="/cor24-rs/cor24-emulator-f59b3bd45536b895_bg.wasm" crossorigin="anonymous" integrity="sha384-44H9lBC3fcFOv2OMBn0EtzcdEne571g8v8DxKBE98p+/gGTTp3BWfyUnnTil8CYc" as="fetch" type="application/wasm"></head>
 <body>
 </body>
 </html>

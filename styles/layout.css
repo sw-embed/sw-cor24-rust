@@ -10,7 +10,7 @@
 /* Main Content Grid - account for sidebar */
 .main-content {
     display: grid;
-    grid-template-columns: 0.75fr 1.25fr;
+    grid-template-columns: 45fr 55fr;
     gap: 8px;
     flex: 1;
     overflow: hidden;

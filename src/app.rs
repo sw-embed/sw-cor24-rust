@@ -4,7 +4,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use components::{
-    Collapsible, Header, LegendItem, MemoryViewer, Modal, ProgramArea, Register, RegisterPanel,
+    Header, LegendItem, MemoryViewer, Modal, ProgramArea, Register, RegisterPanel,
     RustCpuState, RustExample, RustPipeline, Sidebar, SidebarButton, Tab, TabBar,
 };
 use yew::prelude::*;
@@ -164,10 +164,38 @@ pub fn app() -> Html {
     let on_step = {
         let cpu = cpu.clone();
         let assembly_output = assembly_output.clone();
+        let assembly_lines = assembly_lines.clone();
         let last_registers = last_registers.clone();
+        let program_code = program_code.clone();
 
         Callback::from(move |()| {
             let mut new_cpu = (*cpu).clone();
+
+            // Auto-assemble if no program loaded (PC=0 and no instructions)
+            if new_cpu.instruction_count() == 0 && new_cpu.pc() == 0 {
+                let code = (*program_code).clone();
+                if !code.is_empty() {
+                    match new_cpu.assemble(&code) {
+                        Ok(_) => {
+                            let lines = new_cpu.get_assembled_lines();
+                            assembly_lines.set(lines);
+                            assembly_output.set(Some(html! {
+                                <div class="success-text">
+                                    {"✓ Auto-assembled"}
+                                </div>
+                            }));
+                        }
+                        Err(e) => {
+                            assembly_output.set(Some(html! {
+                                <div class="error-text">
+                                    {format!("Assembly error: {:?}", e)}
+                                </div>
+                            }));
+                            return;
+                        }
+                    }
+                }
+            }
 
             // Save current state for change tracking
             last_registers.set(new_cpu.get_registers());
@@ -190,11 +218,41 @@ pub fn app() -> Html {
     let on_run = {
         let cpu = cpu.clone();
         let assembly_output = assembly_output.clone();
+        let assembly_lines = assembly_lines.clone();
+        let program_code = program_code.clone();
         let asm_is_running = asm_is_running.clone();
         let stop_flag = asm_stop_requested.borrow().clone();
         let switches = shared_switches.borrow().clone();
 
         Callback::from(move |()| {
+            // Auto-assemble if no program loaded
+            if (*cpu).instruction_count() == 0 && (*cpu).pc() == 0 {
+                let code = (*program_code).clone();
+                if !code.is_empty() {
+                    let mut new_cpu = (*cpu).clone();
+                    match new_cpu.assemble(&code) {
+                        Ok(_) => {
+                            let lines = new_cpu.get_assembled_lines();
+                            assembly_lines.set(lines);
+                            assembly_output.set(Some(html! {
+                                <div class="success-text">
+                                    {"✓ Auto-assembled"}
+                                </div>
+                            }));
+                            cpu.set(new_cpu);
+                        }
+                        Err(e) => {
+                            assembly_output.set(Some(html! {
+                                <div class="error-text">
+                                    {format!("Assembly error: {:?}", e)}
+                                </div>
+                            }));
+                            return;
+                        }
+                    }
+                }
+            }
+
             // Start animated run
             asm_is_running.set(true);
             stop_flag.set(false);
@@ -233,10 +291,10 @@ pub fn app() -> Html {
                 // Read switch state from shared Rc<Cell> (updated by switch onclick)
                 current_cpu.set_switches(switch_handle.get());
 
-                // Execute a small batch of instructions (small batch = responsive to input)
+                // Execute a batch of instructions per animation frame
                 let mut halted = false;
                 let mut error_msg = None;
-                for _ in 0..10 {
+                for _ in 0..500 {
                     if current_cpu.is_halted() {
                         halted = true;
                         break;
@@ -453,22 +511,22 @@ pub fn app() -> Html {
             let cpu_handle = rust_cpu.clone();
             let running = rust_is_running.clone();
             let state = rust_cpu_state.clone();
-            let asm_lines = (*state).assembled_lines.clone();
+            let asm_lines = state.assembled_lines.clone();
             let initial_cpu = (*rust_cpu).clone();
-            let prev_regs = (*state).registers;
-            let prev_prev_regs = (*state).prev_registers;
-            let prev_mem_low = (*state).memory_low.clone();
-            let prev_mem_high = (*state).memory_high.clone();
-            let prev_mem_stack = (*state).memory_stack.clone();
-            let prev_prev_mem_low = (*state).prev_memory_low.clone();
-            let prev_prev_mem_high = (*state).prev_memory_high.clone();
-            let prev_prev_mem_stack = (*state).prev_memory_stack.clone();
+            let prev_regs = state.registers;
+            let prev_prev_regs = state.prev_registers;
+            let prev_mem_low = state.memory_low.clone();
+            let prev_mem_high = state.memory_high.clone();
+            let prev_mem_stack = state.memory_stack.clone();
+            let prev_prev_mem_low = state.prev_memory_low.clone();
+            let prev_prev_mem_high = state.prev_memory_high.clone();
+            let prev_prev_mem_stack = state.prev_memory_stack.clone();
             let stop_flag = Rc::clone(&stop_flag.borrow());
             let switch_state = Rc::clone(&switch_state.borrow());
 
             // Run with animation using timer
             gloo::timers::callback::Timeout::new(50, move || {
-                #[allow(clippy::too_many_arguments)]
+                #[allow(clippy::too_many_arguments, clippy::only_used_in_recursion)]
                 fn run_step(
                     mut current_cpu: WasmCpu,
                     cpu_handle: yew::UseStateHandle<WasmCpu>,
@@ -694,6 +752,8 @@ pub fn app() -> Html {
         let reg_names = ["r0", "r1", "r2", "fp", "sp", "z", "iv", "ir"];
         let mut reg_list = Vec::new();
         for i in 0..8 {
+            // Skip z register (index 5) — always zero, not useful in status
+            if i == 5 { continue; }
             let changed = regs[i] != last_regs[i];
             reg_list.push(Register {
                 name: reg_names[i].to_string(),
@@ -707,32 +767,27 @@ pub fn app() -> Html {
     let legend_items = vec![
         LegendItem {
             label: "fp".to_string(),
-            value: "Frame Pointer (r3)".to_string(),
+            value: "Frame Pointer".to_string(),
             changed: false,
         },
         LegendItem {
             label: "sp".to_string(),
-            value: "Stack Pointer (r4)".to_string(),
+            value: "Stack Pointer".to_string(),
             changed: false,
         },
         LegendItem {
             label: "z".to_string(),
-            value: "Zero for comparisons (r5)".to_string(),
+            value: "Always zero (compare only)".to_string(),
             changed: false,
         },
         LegendItem {
             label: "iv".to_string(),
-            value: "Interrupt Vector (r6)".to_string(),
+            value: "Interrupt Vector".to_string(),
             changed: false,
         },
         LegendItem {
             label: "ir".to_string(),
-            value: "Interrupt Return (r7)".to_string(),
-            changed: false,
-        },
-        LegendItem {
-            label: "C".to_string(),
-            value: format!("Condition: {}", if (*cpu).get_c_flag() { "1" } else { "0" }),
+            value: "Interrupt Return".to_string(),
             changed: false,
         },
     ];
@@ -741,13 +796,13 @@ pub fn app() -> Html {
     let program_end = (*cpu).get_program_end();
     let program_bytes = std::cmp::min(program_end as usize, 256).max(32);
     // Round up to next multiple of 16 for clean display
-    let program_bytes = ((program_bytes + 15) / 16) * 16;
+    let program_bytes = program_bytes.div_ceil(16) * 16;
     let memory_program = (*cpu).get_memory_slice(0, program_bytes as u32);
     let sp = (*cpu).read_register(4); // r4 = SP
     let stack_display_bytes: u32 = 64;
     let memory_stack = (*cpu).get_memory_slice(sp, stack_display_bytes);
-    let io_display_bytes: u32 = 128;
-    let memory_io = (*cpu).get_memory_slice(0xFFFF80, io_display_bytes);
+    let memory_io_led = (*cpu).get_memory_slice(0xFF0000, 32);
+    let memory_io_uart = (*cpu).get_memory_slice(0xFF0100, 16);
     let pc = (*cpu).pc();
 
     // Get examples for the modal
@@ -760,8 +815,8 @@ pub fn app() -> Html {
     let asm_led_on = ((*cpu).get_leds() & 1) == 1;
     let asm_led_class = if asm_led_on { "led led-on led-large" } else { "led led-off led-large" };
     let asm_led_status = if asm_led_on { "ON" } else { "OFF" };
-    let asm_button_pressed = ((*cpu).get_switches() & 1) == 1;
-    let asm_button_class = if asm_button_pressed { "switch switch-on switch-large" } else { "switch switch-off switch-large" };
+    let asm_button_pressed = ((*cpu).get_switches() & 1) == 0; // S2 normally high: low = pressed
+
     let asm_button_status = if asm_button_pressed { "PRESSED" } else { "released" };
 
     // Button toggle callback for assembler tab
@@ -840,14 +895,13 @@ pub fn app() -> Html {
                 />
 
                 <div class="right-panels">
-                    <div class="registers-panel">
-                        <RegisterPanel
-                            registers={registers}
-                            legend_items={legend_items}
-                        />
+                    <RegisterPanel
+                        registers={registers}
+                        legend_items={legend_items}
+                    />
 
-                        // CPU Status
-                        <div class="cpu-status">
+                    // CPU Status
+                    <div class="cpu-status">
                             <div class="status-item">
                                 <span class="status-label">{"PC:"}</span>
                                 <span class="status-value">{format!("0x{:06X}", (*cpu).pc())}</span>
@@ -866,32 +920,29 @@ pub fn app() -> Html {
                                     {if (*cpu).is_halted() { "HALTED" } else { "RUNNING" }}
                                 </span>
                             </div>
+                            <div class="status-item">
+                                <span class="status-label">{"C:"}</span>
+                                <span class={if (*cpu).get_c_flag() { "status-value condition-set" } else { "status-value" }}>
+                                    {if (*cpu).get_c_flag() { "1" } else { "0" }}
+                                </span>
+                            </div>
+                        </div>
+
+                    // I/O Panel: LED D2 and Button S2 — compact horizontal layout
+                    <div class="io-bar">
+                        <span class="io-bar-label">{"I/O (0xFF0000):"}</span>
+                        <div class="io-bar-item">
+                            <span class="io-bar-name">{"LED D2"}</span>
+                            <div class={asm_led_class} title="LED D2">{"D2"}</div>
+                            <span class="io-bar-status">{asm_led_status}</span>
+                        </div>
+                        <div class="io-bar-item">
+                            <button class="io-button" title="Click to toggle S2" onclick={asm_button_onclick}>
+                                {"S2 Button"}
+                            </button>
+                            <span class="io-bar-status">{asm_button_status}</span>
                         </div>
                     </div>
-
-                    // I/O Panel: LED D2 and Button S2 (matches COR24-TB hardware)
-                    <Collapsible title="I/O Peripherals" initially_open={true}>
-                        <div class="io-section">
-                            <div class="io-label">{"LED D2 (write bit 0 to 0xFF0000)"}</div>
-                            <div class="led-row">
-                                <div class={asm_led_class} title="LED D2">
-                                    {"D2"}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="io-section">
-                            <div class="io-label">{"Button S2 (read bit 0 from 0xFF0000)"}</div>
-                            <div class="switch-row">
-                                <div class={asm_button_class} title="Button S2 (click to toggle)" onclick={asm_button_onclick}>
-                                    {"S2"}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="io-values">
-                            <span>{"LED: "}{asm_led_status}</span>
-                            <span>{"  Button: "}{asm_button_status}</span>
-                        </div>
-                    </Collapsible>
 
                     <MemoryViewer
                         memory={memory_program.clone()}
@@ -910,12 +961,20 @@ pub fn app() -> Html {
                         bytes_to_show={stack_display_bytes as usize}
                     />
                     <MemoryViewer
-                        memory={memory_io}
+                        memory={memory_io_led}
                         pc={0u32}
-                        base_address={0xFFFF80u32}
-                        title={Some("I/O (0xFFFF80 →)".to_string())}
+                        base_address={0xFF0000u32}
+                        title={Some("I/O: LED/Button + IntEnable".to_string())}
                         bytes_per_row={16}
-                        bytes_to_show={io_display_bytes as usize}
+                        bytes_to_show={32}
+                    />
+                    <MemoryViewer
+                        memory={memory_io_uart}
+                        pc={0u32}
+                        base_address={0xFF0100u32}
+                        title={Some("I/O: UART Data + Status".to_string())}
+                        bytes_per_row={16}
+                        bytes_to_show={16}
                     />
                 </div>
             </div>
@@ -969,7 +1028,7 @@ pub fn app() -> Html {
                                 let challenge_result = challenge_result.clone();
                                 let program_code = program_code.clone();
                                 Callback::from(move |_| {
-                                    match validate_challenge(challenge_id, &(*program_code)) {
+                                    match validate_challenge(challenge_id, &program_code) {
                                         Ok(passed) => {
                                             if passed {
                                                 challenge_result.set(Some(Ok(format!("✅ Challenge {} PASSED!", challenge_id))));

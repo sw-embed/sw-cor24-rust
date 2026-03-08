@@ -107,6 +107,20 @@ impl Assembler {
             return;
         }
 
+        // Strip trailing comments before any parsing (colons in comments
+        // would otherwise be misidentified as label separators)
+        let line = if let Some(pos) = line.find(';') {
+            line[..pos].trim()
+        } else if let Some(pos) = line.find('#') {
+            line[..pos].trim()
+        } else {
+            line
+        };
+
+        if line.is_empty() {
+            return;
+        }
+
         let start_addr = self.address;
         let mut label = None;
         let mut instruction_part = line;
@@ -1118,5 +1132,28 @@ mod tests {
 
         assert_eq!(cpu.get_reg(0), 0, "r0 should be 0 after counting down");
         assert!(cpu.c, "c flag should be true (r0 == z)");
+    }
+
+    #[test]
+    fn test_example10_button_echo() {
+        let code = r#"; Example 10: Button Echo
+; LED D2 lights when button S2 is pressed
+
+        la      r1,0xFF0000 ; I/O address (LEDSWDAT)
+        lc      r2,1        ; Bit mask for XOR
+
+loop:
+        lb      r0,0(r1)    ; Read button S2
+        xor     r0,r2       ; Invert
+        sb      r0,0(r1)    ; Write to LED D2
+
+        bra     loop        ; Keep polling
+
+halt:   bra     halt        ; Never reached
+"#;
+        let mut asm = Assembler::new();
+        let result = asm.assemble(code);
+        assert!(result.errors.is_empty(), "Assembly errors: {:?}", result.errors);
+        assert!(result.bytes.len() > 0, "Should produce bytes");
     }
 }

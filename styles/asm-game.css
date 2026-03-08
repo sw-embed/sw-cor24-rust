@@ -77,7 +77,7 @@ h1 {
 
 .panel-title {
     color: #7fd8ff;
-    font-size: 0.9em;
+    font-size: 1.3em;
     margin-bottom: 4px;
     border-bottom: 1px solid #7fd8ff;
     padding-bottom: 2px;
@@ -151,7 +151,7 @@ button.stop-btn:hover {
     border-radius: 3px;
     padding: 8px;
     font-family: 'Monaco', monospace;
-    font-size: 0.9em;
+    font-size: 1.3em;
     resize: none;
     flex: 1.2;
     min-height: 150px;
@@ -162,7 +162,7 @@ button.stop-btn:hover {
     padding: 8px;
     border-radius: 3px;
     font-family: 'Monaco', monospace;
-    font-size: 0.9em;
+    font-size: 1.3em;
     flex: 1;
     overflow-y: auto;
     display: none;
@@ -190,14 +190,12 @@ button.stop-btn:hover {
 
 /* RegisterPanel Component */
 .registers-panel {
-    flex: 0.6;
-    overflow: hidden;
+    flex-shrink: 0;
     background: #111122;
     border-radius: 5px;
     padding: 6px;
     display: flex;
     flex-direction: column;
-    min-height: 0;
 }
 
 .registers-container {
@@ -211,7 +209,7 @@ button.stop-btn:hover {
 .register-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2px;
+    gap: 2px 24px;
     flex: 1;
     overflow-y: auto;
     align-content: start;
@@ -220,12 +218,12 @@ button.stop-btn:hover {
 
 .register {
     background: #0a0a1a;
-    padding: 4px 8px;
+    padding: 4px 6px;
     border-radius: 3px;
     display: flex;
-    justify-content: space-between;
+    gap: 6px;
     align-items: center;
-    font-size: 0.9em;
+    font-size: 1.3em;
     transition: background-color 0.3s ease;
 }
 
@@ -255,11 +253,12 @@ button.stop-btn:hover {
     background: #0a0a1a;
     padding: 4px 6px;
     border-radius: 3px;
-    font-size: 0.8em;
+    font-size: 1.1em;
     color: #ccc;
     border-left: 2px solid #7fd8ff;
-    width: 150px;
+    min-width: 250px;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .legend-title {
@@ -291,14 +290,12 @@ button.stop-btn:hover {
 
 /* MemoryViewer Component */
 .memory-panel {
-    flex: 2;
-    overflow: hidden;
+    flex-shrink: 0;
     background: #111122;
     border-radius: 5px;
     padding: 6px;
     display: flex;
     flex-direction: column;
-    min-height: 0;
 }
 
 .memory-viewer {
@@ -308,7 +305,7 @@ button.stop-btn:hover {
     overflow-y: auto;
     flex: 1;
     font-family: 'Monaco', monospace;
-    font-size: 0.85em;
+    font-size: 1.25em;
     min-height: 0;
 }
 
@@ -393,10 +390,9 @@ button.stop-btn:hover {
 
 /* CPU Status */
 .cpu-status {
-    background: #0a0a1a;
-    padding: 4px 8px;
-    border-radius: 3px;
-    margin-top: 4px;
+    background: #111122;
+    padding: 6px 8px;
+    border-radius: 5px;
     flex-shrink: 0;
     display: flex;
     gap: 8px;
@@ -407,7 +403,7 @@ button.stop-btn:hover {
     display: flex;
     gap: 4px;
     align-items: center;
-    font-size: 0.85em;
+    font-size: 1.2em;
 }
 
 .status-label {
@@ -416,6 +412,76 @@ button.stop-btn:hover {
 
 .status-value {
     color: #e0e0e0;
+}
+
+.status-value.condition-set {
+    color: #ffcc00;
+    font-weight: bold;
+}
+
+/* Compact I/O Bar */
+.io-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #111122;
+    padding: 6px 10px;
+    border-radius: 5px;
+    flex-wrap: wrap;
+}
+
+.io-bar-label {
+    color: #999;
+    font-size: 0.8em;
+    white-space: nowrap;
+}
+
+.io-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.io-bar-name {
+    color: #bbb;
+    font-size: 0.8em;
+}
+
+.io-bar-status {
+    color: #e0e0e0;
+    font-size: 0.8em;
+    font-family: 'Monaco', monospace;
+}
+
+.io-bar .led {
+    width: 44px;
+    height: 22px;
+    border-radius: 11px;
+    font-size: 0.75em;
+}
+
+.io-button {
+    background: linear-gradient(to bottom, #444, #222);
+    color: #ccc;
+    border: 2px solid #555;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-family: 'Monaco', monospace;
+    font-size: 0.85em;
+    cursor: pointer;
+    user-select: none;
+}
+
+.io-button:hover {
+    background: linear-gradient(to bottom, #555, #333);
+    border-color: #00d9ff;
+    color: #fff;
+}
+
+.io-button:active {
+    background: linear-gradient(to bottom, #00d9ff, #0099cc);
+    color: #fff;
+    transform: scale(0.95);
 }
 
 /* Modal Component */
@@ -663,7 +729,7 @@ table td {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    overflow: hidden;
+    overflow-y: auto;
 }
 
 /* I/O Panel (LEDs and Switches) */
@@ -1154,10 +1220,10 @@ header h1 {
     gap: 16px;
 }
 
-/* Registers panel (assembler tab override) */
+/* Registers panel (later override for content padding) */
 .registers-panel {
     background: #111122;
-    padding: 12px;
+    padding: 8px;
     border-radius: 5px;
 }
 
@@ -1261,7 +1327,7 @@ header h1 {
 /* Assembler tab uses existing main-content layout */
 .assembler-tab {
     display: grid;
-    grid-template-columns: 0.75fr 1.25fr;
+    grid-template-columns: 1.6fr 0.4fr;
     gap: 8px;
     flex: 1;
     overflow: hidden;
