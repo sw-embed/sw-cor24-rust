@@ -39,6 +39,9 @@ pub fn app() -> Html {
     let current_challenge_id = use_state(|| None::<usize>);
     let challenge_result = use_state(|| None::<Result<String, String>>);
 
+    // Track whether assembly succeeded (enables Step/Run)
+    let asm_assembled = use_state(|| false);
+
     // Animated run state for assembler tab
     let asm_is_running = use_state(|| false);
     // Use Rc<Cell> for stop flag - provides immediate visibility across closures
@@ -130,6 +133,7 @@ pub fn app() -> Html {
         let assembly_output = assembly_output.clone();
         let assembly_lines = assembly_lines.clone();
         let program_code = program_code.clone();
+        let asm_assembled = asm_assembled.clone();
 
         Callback::from(move |code: String| {
             program_code.set(code.clone());
@@ -142,6 +146,7 @@ pub fn app() -> Html {
                     let lines = new_cpu.get_assembled_lines();
                     assembly_lines.set(lines);
                     cpu.set(new_cpu);
+                    asm_assembled.set(true);
 
                     assembly_output.set(Some(html! {
                         <div class="success-text">
@@ -151,6 +156,7 @@ pub fn app() -> Html {
                 }
                 Err(e) => {
                     assembly_lines.set(Vec::new());
+                    asm_assembled.set(false);
                     assembly_output.set(Some(html! {
                         <div class="error-text">
                             {format!("Assembly error: {:?}", e)}
@@ -164,38 +170,10 @@ pub fn app() -> Html {
     let on_step = {
         let cpu = cpu.clone();
         let assembly_output = assembly_output.clone();
-        let assembly_lines = assembly_lines.clone();
         let last_registers = last_registers.clone();
-        let program_code = program_code.clone();
 
         Callback::from(move |()| {
             let mut new_cpu = (*cpu).clone();
-
-            // Auto-assemble if no program loaded (PC=0 and no instructions)
-            if new_cpu.instruction_count() == 0 && new_cpu.pc() == 0 {
-                let code = (*program_code).clone();
-                if !code.is_empty() {
-                    match new_cpu.assemble(&code) {
-                        Ok(_) => {
-                            let lines = new_cpu.get_assembled_lines();
-                            assembly_lines.set(lines);
-                            assembly_output.set(Some(html! {
-                                <div class="success-text">
-                                    {"✓ Auto-assembled"}
-                                </div>
-                            }));
-                        }
-                        Err(e) => {
-                            assembly_output.set(Some(html! {
-                                <div class="error-text">
-                                    {format!("Assembly error: {:?}", e)}
-                                </div>
-                            }));
-                            return;
-                        }
-                    }
-                }
-            }
 
             // Save current state for change tracking
             last_registers.set(new_cpu.get_registers());
@@ -218,41 +196,11 @@ pub fn app() -> Html {
     let on_run = {
         let cpu = cpu.clone();
         let assembly_output = assembly_output.clone();
-        let assembly_lines = assembly_lines.clone();
-        let program_code = program_code.clone();
         let asm_is_running = asm_is_running.clone();
         let stop_flag = asm_stop_requested.borrow().clone();
         let switches = shared_switches.borrow().clone();
 
         Callback::from(move |()| {
-            // Auto-assemble if no program loaded
-            if (*cpu).instruction_count() == 0 && (*cpu).pc() == 0 {
-                let code = (*program_code).clone();
-                if !code.is_empty() {
-                    let mut new_cpu = (*cpu).clone();
-                    match new_cpu.assemble(&code) {
-                        Ok(_) => {
-                            let lines = new_cpu.get_assembled_lines();
-                            assembly_lines.set(lines);
-                            assembly_output.set(Some(html! {
-                                <div class="success-text">
-                                    {"✓ Auto-assembled"}
-                                </div>
-                            }));
-                            cpu.set(new_cpu);
-                        }
-                        Err(e) => {
-                            assembly_output.set(Some(html! {
-                                <div class="error-text">
-                                    {format!("Assembly error: {:?}", e)}
-                                </div>
-                            }));
-                            return;
-                        }
-                    }
-                }
-            }
-
             // Start animated run
             asm_is_running.set(true);
             stop_flag.set(false);
@@ -352,12 +300,14 @@ pub fn app() -> Html {
         let cpu = cpu.clone();
         let assembly_output = assembly_output.clone();
         let assembly_lines = assembly_lines.clone();
+        let asm_assembled = asm_assembled.clone();
 
         Callback::from(move |()| {
             // Full reset - create new CPU with cleared memory
             cpu.set(WasmCpu::new());
             assembly_lines.set(Vec::new());
             assembly_output.set(None);
+            asm_assembled.set(false);
         })
     };
 
@@ -890,8 +840,8 @@ pub fn app() -> Html {
                         }
                     }
                     initial_code={Some((*program_code).clone())}
-                    step_enabled={!(*cpu).is_halted()}
-                    run_enabled={!(*cpu).is_halted()}
+                    step_enabled={*asm_assembled && !(*cpu).is_halted()}
+                    run_enabled={*asm_assembled && !(*cpu).is_halted()}
                 />
 
                 <div class="right-panels">
@@ -902,17 +852,10 @@ pub fn app() -> Html {
 
                     // CPU Status
                     <div class="cpu-status">
+                        <div class="status-left">
                             <div class="status-item">
                                 <span class="status-label">{"PC:"}</span>
                                 <span class="status-value">{format!("0x{:06X}", (*cpu).pc())}</span>
-                            </div>
-                            <div class="status-item">
-                                <span class="status-label">{"Cycles:"}</span>
-                                <span class="status-value">{(*cpu).cycle_count()}</span>
-                            </div>
-                            <div class="status-item">
-                                <span class="status-label">{"Instructions:"}</span>
-                                <span class="status-value">{(*cpu).instruction_count()}</span>
                             </div>
                             <div class="status-item">
                                 <span class="status-label">{"Status:"}</span>
@@ -927,20 +870,31 @@ pub fn app() -> Html {
                                 </span>
                             </div>
                         </div>
+                        <div class="status-right">
+                            <div class="status-item">
+                                <span class="status-label">{"Cycles:"}</span>
+                                <span class="status-value">{(*cpu).cycle_count()}</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">{"Instructions:"}</span>
+                                <span class="status-value">{(*cpu).instruction_count()}</span>
+                            </div>
+                        </div>
+                        </div>
 
                     // I/O Panel: LED D2 and Button S2 — compact horizontal layout
                     <div class="io-bar">
                         <span class="io-bar-label">{"I/O (0xFF0000):"}</span>
                         <div class="io-bar-item">
+                            <button class="io-button" title="Click to toggle S2" onclick={asm_button_onclick}>
+                                {"S2 Switch"}
+                            </button>
+                            <span class="io-bar-status">{asm_button_status}</span>
+                        </div>
+                        <div class="io-bar-item">
                             <span class="io-bar-name">{"LED D2"}</span>
                             <div class={asm_led_class} title="LED D2">{"D2"}</div>
                             <span class="io-bar-status">{asm_led_status}</span>
-                        </div>
-                        <div class="io-bar-item">
-                            <button class="io-button" title="Click to toggle S2" onclick={asm_button_onclick}>
-                                {"S2 Button"}
-                            </button>
-                            <span class="io-bar-status">{asm_button_status}</span>
                         </div>
                     </div>
 
