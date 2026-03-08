@@ -1,19 +1,20 @@
 //! WASM bindings for the COR24 CPU simulator
 //!
 //! This module provides JavaScript-accessible interfaces to the CPU.
+//! WasmCpu wraps EmulatorCore for consistent behavior with the CLI.
 
 use crate::assembler::{Assembler, AssemblyResult};
 use crate::challenge::get_challenges;
 use crate::cpu::{CpuState, ExecuteResult, Executor};
+use crate::emulator::EmulatorCore;
 use wasm_bindgen::prelude::*;
 use web_sys::console;
 
-/// WASM-accessible CPU wrapper
+/// WASM-accessible CPU wrapper backed by EmulatorCore
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct WasmCpu {
-    cpu: CpuState,
-    executor: Executor,
+    emu: EmulatorCore,
     last_result: Option<AssemblyResult>,
 }
 
@@ -28,24 +29,21 @@ impl WasmCpu {
     /// Create a new CPU
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        // Set panic hook for better error messages
         console_error_panic_hook::set_once();
-
         Self {
-            cpu: CpuState::new(),
-            executor: Executor::new(),
+            emu: EmulatorCore::new(),
             last_result: None,
         }
     }
 
     /// Reset the CPU to initial state (preserves memory)
     pub fn reset(&mut self) {
-        self.cpu.reset();
+        self.emu.reset();
     }
 
     /// Hard reset - clears memory too
     pub fn hard_reset(&mut self) {
-        self.cpu.hard_reset();
+        self.emu.hard_reset();
         self.last_result = None;
     }
 
@@ -55,9 +53,13 @@ impl WasmCpu {
         let result = assembler.assemble(source);
 
         if result.errors.is_empty() {
-            // Load program into memory at address 0
-            self.cpu.hard_reset();
-            self.cpu.load_program(0, &result.bytes);
+            self.emu.hard_reset();
+            // Load bytes at their correct addresses
+            for line in &result.lines {
+                for (i, &b) in line.bytes.iter().enumerate() {
+                    self.emu.write_byte(line.address + i as u32, b);
+                }
+            }
 
             console::log_1(&JsValue::from_str(&format!(
                 "Loaded {} bytes into memory",
@@ -65,8 +67,6 @@ impl WasmCpu {
             )));
 
             self.last_result = Some(result.clone());
-
-            // Return assembly output as JSON
             serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
         } else {
             Err(JsValue::from_str(&result.errors.join("\n")))
@@ -100,184 +100,173 @@ impl WasmCpu {
 
     /// Execute one instruction
     pub fn step(&mut self) -> Result<bool, JsValue> {
-        match self.executor.step(&mut self.cpu) {
-            ExecuteResult::Ok => Ok(true),
-            ExecuteResult::Halted => Ok(false),
-            ExecuteResult::InvalidInstruction(byte) => Err(JsValue::from_str(&format!(
-                "Invalid instruction: 0x{:02X}",
-                byte
-            ))),
-            ExecuteResult::MemoryError(addr) => Err(JsValue::from_str(&format!(
-                "Memory error at address: 0x{:06X}",
-                addr
-            ))),
+        let result = self.emu.step();
+        match result.reason {
+            crate::emulator::StopReason::CycleLimit => Ok(true),
+            crate::emulator::StopReason::Halted => Ok(false),
+            crate::emulator::StopReason::InvalidInstruction(byte) => Err(JsValue::from_str(
+                &format!("Invalid instruction: 0x{:02X}", byte),
+            )),
+            _ => Ok(true),
+        }
+    }
+
+    /// Run a batch of instructions (for animated execution)
+    pub fn run_batch(&mut self, max_instructions: u32) -> bool {
+        self.emu.resume();
+        let result = self.emu.run_batch(max_instructions as u64);
+        match result.reason {
+            crate::emulator::StopReason::Halted => false,
+            crate::emulator::StopReason::InvalidInstruction(_) => false,
+            _ => true,
         }
     }
 
     /// Run until halt or error
     pub fn run(&mut self) -> Result<(), JsValue> {
-        match self.executor.run(&mut self.cpu, 100000) {
-            ExecuteResult::Ok => Ok(()),
-            ExecuteResult::Halted => Ok(()),
-            ExecuteResult::InvalidInstruction(byte) => Err(JsValue::from_str(&format!(
-                "Invalid instruction: 0x{:02X}",
-                byte
-            ))),
-            ExecuteResult::MemoryError(addr) => Err(JsValue::from_str(&format!(
-                "Memory error at address: 0x{:06X}",
-                addr
-            ))),
+        self.emu.resume();
+        let result = self.emu.run_batch(100_000);
+        match result.reason {
+            crate::emulator::StopReason::CycleLimit
+            | crate::emulator::StopReason::Halted
+            | crate::emulator::StopReason::Paused
+            | crate::emulator::StopReason::Breakpoint(_) => Ok(()),
+            crate::emulator::StopReason::InvalidInstruction(byte) => Err(JsValue::from_str(
+                &format!("Invalid instruction: 0x{:02X}", byte),
+            )),
         }
     }
 
     /// Check if CPU is halted
     pub fn is_halted(&self) -> bool {
-        self.cpu.halted
+        self.emu.is_halted()
     }
 
     /// Get program counter
     pub fn pc(&self) -> u32 {
-        self.cpu.pc
+        self.emu.pc()
     }
 
     /// Get cycle count
     pub fn cycle_count(&self) -> u64 {
-        self.cpu.cycles
+        self.emu.cycles()
     }
 
     /// Get instruction count
     pub fn instruction_count(&self) -> u64 {
-        self.cpu.instructions
+        self.emu.instructions_count()
     }
 
     /// Get condition flag
     pub fn get_c_flag(&self) -> bool {
-        self.cpu.c
+        self.emu.condition_flag()
     }
 
     /// Read a register value
     pub fn read_register(&self, reg: u8) -> u32 {
-        self.cpu.get_reg(reg)
+        self.emu.get_reg(reg)
     }
 
     /// Get all register values as an array
     pub fn get_registers(&self) -> Vec<u32> {
-        (0..8).map(|i| self.cpu.get_reg(i)).collect()
+        (0..8).map(|i| self.emu.get_reg(i)).collect()
     }
 
     /// Read memory byte
     pub fn read_memory(&self, addr: u32) -> u8 {
-        self.cpu.read_byte(addr)
+        self.emu.read_byte(addr)
     }
 
     /// Get memory slice as bytes
     pub fn get_memory_slice(&self, start: u32, len: u32) -> Vec<u8> {
-        (0..len).map(|i| self.cpu.read_byte(start + i)).collect()
+        self.emu.read_memory(start, len)
     }
 
     // ===== I/O Peripheral Access =====
 
     /// Get LED state (8 bits)
     pub fn get_leds(&self) -> u8 {
-        self.cpu.io.leds
+        self.emu.get_led()
     }
 
     /// Get switch state (8 bits)
     pub fn get_switches(&self) -> u8 {
-        self.cpu.io.switches
+        if self.emu.get_button() { 0xFE } else { 0xFF }
     }
 
     /// Set switch state (simulates external switch input)
     pub fn set_switches(&mut self, value: u8) {
-        self.cpu.io.switches = value;
+        self.emu.set_button_pressed(value & 1 == 0);
     }
 
     /// Toggle a specific switch bit
     pub fn toggle_switch(&mut self, bit: u8) {
-        if bit < 8 {
-            self.cpu.io.switches ^= 1 << bit;
+        if bit == 0 {
+            let pressed = self.emu.get_button();
+            self.emu.set_button_pressed(!pressed);
         }
     }
 
     /// Get UART output buffer
     pub fn get_uart_output(&self) -> String {
-        self.cpu.io.uart_output.clone()
+        self.emu.get_uart_output().to_string()
     }
 
     /// Clear UART output buffer
     pub fn clear_uart_output(&mut self) {
-        self.cpu.io.uart_output.clear();
+        self.emu.clear_uart_output();
     }
 
     /// Send a character to UART RX (simulates input)
     pub fn uart_send_char(&mut self, c: char) {
-        self.cpu.io.uart_rx = c as u8;
-        self.cpu.io.uart_rx_ready = true;
+        self.emu.send_uart_byte(c as u8);
     }
 
-    // ===== Additional accessors for Rust pipeline =====
+    // ===== Additional accessors =====
 
     /// Get program counter (alias for pc())
     pub fn get_pc(&self) -> u32 {
-        self.cpu.pc
+        self.emu.pc()
     }
 
     /// Get condition flag (alias for get_c_flag())
     pub fn get_condition_flag(&self) -> bool {
-        self.cpu.c
+        self.emu.condition_flag()
     }
 
     /// Get LED value (alias for get_leds())
     pub fn get_led_value(&self) -> u8 {
-        self.cpu.io.leds
+        self.emu.get_led()
     }
 
     /// Get cycle count as u32 (truncated from u64)
     pub fn get_cycle_count(&self) -> u32 {
-        self.cpu.cycles as u32
+        self.emu.cycles() as u32
     }
 
     /// Read a byte from memory (alias for read_memory())
     pub fn read_byte(&self, addr: u32) -> u8 {
-        self.cpu.read_byte(addr)
+        self.emu.read_byte(addr)
     }
 
-    /// Get the current instruction disassembly
+    /// Get the current instruction disassembly (uses EmulatorCore's disassembler)
     pub fn get_current_instruction(&self) -> String {
-        if self.cpu.halted {
+        if self.emu.is_halted() {
             return "HALTED".to_string();
         }
-        // Read opcode at PC
-        let pc = self.cpu.pc;
-        let opcode = self.cpu.read_byte(pc);
+        let pc = self.emu.pc();
+        let (text, _) = self.emu.disassemble_at(pc);
+        format!("{:04X}: {}", pc, text)
+    }
 
-        // Get basic instruction name from opcode
-        let name = match opcode {
-            0x00..=0x02 => "add",
-            0x03..=0x0B => "add/sub/mul",
-            0x0C..=0x12 => "logic",
-            0x13 => "bra",
-            0x14 => "brf",
-            0x15 => "brt",
-            0x16..=0x43 => "mov/cmp",
-            0x44..=0x4F => "lc",
-            0x50..=0x5F => "mov",
-            0x60..=0x6F => "jmp/jal",
-            0x70..=0x7F => "push/pop",
-            0x80..=0x9F => "sw/lw",
-            0xA0..=0xBF => "sb/lb",
-            0xC0..=0xCF => "la",
-            0xD0..=0xD2 => "li",
-            _ => "???",
-        };
-        format!("{:04X}: {:02X}  {}", pc, opcode, name)
+    /// Get the end address of loaded program (highest address written)
+    pub fn get_program_end(&self) -> u32 {
+        self.emu.program_end()
     }
 
     /// Check if should stop for LED output (for animation purposes)
-    /// Returns true after a reasonable number of cycles to prevent infinite loops
     pub fn should_stop_for_led(&self) -> bool {
-        // Stop after 10000 cycles to prevent infinite loops in animation
-        self.cpu.cycles >= 10000
+        self.emu.cycles() >= 10000
     }
 }
 
@@ -290,17 +279,14 @@ pub fn get_challenge_count() -> usize {
 }
 
 /// Validate a solution for a challenge
-/// Returns true if the solution passes
 #[wasm_bindgen]
 pub fn validate_challenge(challenge_id: usize, source: &str) -> Result<bool, JsValue> {
-    // Find the challenge
     let challenges = get_challenges();
     let challenge = challenges
         .iter()
         .find(|c| c.id == challenge_id)
         .ok_or_else(|| JsValue::from_str(&format!("Challenge {} not found", challenge_id)))?;
 
-    // Assemble the source code
     let mut assembler = Assembler::new();
     let result = assembler.assemble(source);
 
@@ -308,17 +294,12 @@ pub fn validate_challenge(challenge_id: usize, source: &str) -> Result<bool, JsV
         return Err(JsValue::from_str(&result.errors.join("\n")));
     }
 
-    // Create a new CPU and load the program
     let mut cpu = CpuState::new();
     cpu.load_program(0, &result.bytes);
 
-    // Run the program
     let executor = Executor::new();
     match executor.run(&mut cpu, 100000) {
-        ExecuteResult::Ok | ExecuteResult::Halted => {
-            // Validate the result
-            Ok((challenge.validator)(&cpu))
-        }
+        ExecuteResult::Ok | ExecuteResult::Halted => Ok((challenge.validator)(&cpu)),
         ExecuteResult::InvalidInstruction(byte) => Err(JsValue::from_str(&format!(
             "Invalid instruction: 0x{:02X}",
             byte
@@ -333,9 +314,6 @@ pub fn validate_challenge(challenge_id: usize, source: &str) -> Result<bool, JsV
 /// Initialize the WASM module and mount Yew app
 #[wasm_bindgen(start)]
 pub fn init() {
-    // Set panic hook for better error messages in browser console
     console_error_panic_hook::set_once();
-
-    // Mount the Yew app
     yew::Renderer::<crate::app::App>::new().render();
 }

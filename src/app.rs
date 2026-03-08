@@ -340,6 +340,11 @@ pub fn app() -> Html {
                 for addr in 0xFFFF80..=0xFFFFFF {
                     memory_high.push(new_cpu.read_byte(addr as u32));
                 }
+                // Capture stack region (64 bytes around SP)
+                let sp = new_cpu.read_register(4);
+                let stack_display_bytes: u32 = 64;
+                let memory_stack = new_cpu.get_memory_slice(sp, stack_display_bytes);
+                let program_end = new_cpu.get_program_end();
 
                 rust_cpu_state.set(RustCpuState {
                     registers,
@@ -352,10 +357,15 @@ pub fn app() -> Html {
                     cycle_count: new_cpu.get_cycle_count(),
                     memory_low: memory_low.clone(),
                     memory_high: memory_high.clone(),
+                    memory_stack: memory_stack.clone(),
+                    stack_base_addr: sp,
+                    program_end,
                     prev_memory_low: memory_low.clone(),
                     prev_memory_high: memory_high.clone(),
+                    prev_memory_stack: memory_stack.clone(),
                     prev_prev_memory_low: memory_low,
                     prev_prev_memory_high: memory_high,
+                    prev_prev_memory_stack: memory_stack,
                     current_instruction: new_cpu.get_current_instruction(),
                     assembled_lines,
                 });
@@ -392,6 +402,10 @@ pub fn app() -> Html {
                 for addr in 0xFFFF80..=0xFFFFFF {
                     memory_high.push(new_cpu.read_byte(addr as u32));
                 }
+                // Capture stack region (64 bytes around SP)
+                let sp = new_cpu.read_register(4);
+                let stack_display_bytes: u32 = 64;
+                let memory_stack = new_cpu.get_memory_slice(sp, stack_display_bytes);
 
                 rust_cpu_state.set(RustCpuState {
                     registers,
@@ -404,10 +418,15 @@ pub fn app() -> Html {
                     cycle_count: new_cpu.get_cycle_count(),
                     memory_low,
                     memory_high,
+                    memory_stack,
+                    stack_base_addr: sp,
+                    program_end: new_cpu.get_program_end(),
                     prev_memory_low: prev_state.memory_low,
                     prev_memory_high: prev_state.memory_high,
+                    prev_memory_stack: prev_state.memory_stack,
                     prev_prev_memory_low: prev_state.prev_memory_low,
                     prev_prev_memory_high: prev_state.prev_memory_high,
+                    prev_prev_memory_stack: prev_state.prev_memory_stack,
                     current_instruction: new_cpu.get_current_instruction(),
                     assembled_lines: prev_state.assembled_lines,
                 });
@@ -440,8 +459,10 @@ pub fn app() -> Html {
             let prev_prev_regs = (*state).prev_registers;
             let prev_mem_low = (*state).memory_low.clone();
             let prev_mem_high = (*state).memory_high.clone();
+            let prev_mem_stack = (*state).memory_stack.clone();
             let prev_prev_mem_low = (*state).prev_memory_low.clone();
             let prev_prev_mem_high = (*state).prev_memory_high.clone();
+            let prev_prev_mem_stack = (*state).prev_memory_stack.clone();
             let stop_flag = Rc::clone(&stop_flag.borrow());
             let switch_state = Rc::clone(&switch_state.borrow());
 
@@ -458,8 +479,10 @@ pub fn app() -> Html {
                     prev_prev_regs: [u32; 8],
                     prev_mem_low: Vec<u8>,
                     prev_mem_high: Vec<u8>,
+                    prev_mem_stack: Vec<u8>,
                     prev_prev_mem_low: Vec<u8>,
                     prev_prev_mem_high: Vec<u8>,
+                    prev_prev_mem_stack: Vec<u8>,
                     steps: u32,
                     stop_flag: Rc<Cell<bool>>,
                     switch_state: Rc<Cell<u8>>,
@@ -503,14 +526,19 @@ pub fn app() -> Html {
                     for addr in 0xFFFF80..=0xFFFFFF {
                         memory_high.push(current_cpu.read_byte(addr as u32));
                     }
+                    // Capture stack region (64 bytes around SP)
+                    let sp = current_cpu.read_register(4);
+                    let memory_stack = current_cpu.get_memory_slice(sp, 64);
 
                     // Save current values as prev for next iteration
                     let next_prev_regs = registers;
                     let next_prev_prev_regs = prev_regs;
                     let next_prev_mem_low = memory_low.clone();
                     let next_prev_mem_high = memory_high.clone();
+                    let next_prev_mem_stack = memory_stack.clone();
                     let next_prev_prev_mem_low = prev_mem_low.clone();
                     let next_prev_prev_mem_high = prev_mem_high.clone();
+                    let next_prev_prev_mem_stack = prev_mem_stack.clone();
 
                     state.set(RustCpuState {
                         registers,
@@ -523,10 +551,15 @@ pub fn app() -> Html {
                         cycle_count: current_cpu.get_cycle_count(),
                         memory_low,
                         memory_high,
+                        memory_stack,
+                        stack_base_addr: sp,
+                        program_end: current_cpu.get_program_end(),
                         prev_memory_low: prev_mem_low,
                         prev_memory_high: prev_mem_high,
+                        prev_memory_stack: prev_mem_stack,
                         prev_prev_memory_low: prev_prev_mem_low,
                         prev_prev_memory_high: prev_prev_mem_high,
+                        prev_prev_memory_stack: prev_prev_mem_stack,
                         current_instruction: current_cpu.get_current_instruction(),
                         assembled_lines: asm_lines.clone(),
                     });
@@ -542,12 +575,12 @@ pub fn app() -> Html {
                         let state = state.clone();
                         let asm_lines = asm_lines.clone();
                         gloo::timers::callback::Timeout::new(30, move || {
-                            run_step(current_cpu, cpu_handle, running, state, asm_lines, next_prev_regs, next_prev_prev_regs, next_prev_mem_low, next_prev_mem_high, next_prev_prev_mem_low, next_prev_prev_mem_high, steps + 10, stop_flag, switch_state);
+                            run_step(current_cpu, cpu_handle, running, state, asm_lines, next_prev_regs, next_prev_prev_regs, next_prev_mem_low, next_prev_mem_high, next_prev_mem_stack, next_prev_prev_mem_low, next_prev_prev_mem_high, next_prev_prev_mem_stack, steps + 10, stop_flag, switch_state);
                         }).forget();
                     }
                 }
 
-                run_step(initial_cpu, cpu_handle, running, state, asm_lines, prev_regs, prev_prev_regs, prev_mem_low, prev_mem_high, prev_prev_mem_low, prev_prev_mem_high, 0, stop_flag, switch_state);
+                run_step(initial_cpu, cpu_handle, running, state, asm_lines, prev_regs, prev_prev_regs, prev_mem_low, prev_mem_high, prev_mem_stack, prev_prev_mem_low, prev_prev_mem_high, prev_prev_mem_stack, 0, stop_flag, switch_state);
             }).forget();
         })
     };
@@ -603,6 +636,10 @@ pub fn app() -> Html {
                     for addr in 0xFFFF80..=0xFFFFFF {
                         memory_high.push(new_cpu.read_byte(addr as u32));
                     }
+                    // Capture stack region (64 bytes around SP)
+                    let sp = new_cpu.read_register(4);
+                    let memory_stack = new_cpu.get_memory_slice(sp, 64);
+                    let program_end = new_cpu.get_program_end();
 
                     rust_cpu_state.set(RustCpuState {
                         registers,
@@ -615,10 +652,15 @@ pub fn app() -> Html {
                         cycle_count: new_cpu.get_cycle_count(),
                         memory_low: memory_low.clone(),
                         memory_high: memory_high.clone(),
+                        memory_stack: memory_stack.clone(),
+                        stack_base_addr: sp,
+                        program_end,
                         prev_memory_low: memory_low.clone(),
                         prev_memory_high: memory_high.clone(),
+                        prev_memory_stack: memory_stack.clone(),
                         prev_prev_memory_low: memory_low,
                         prev_prev_memory_high: memory_high,
+                        prev_prev_memory_stack: memory_stack,
                         current_instruction: new_cpu.get_current_instruction(),
                         assembled_lines,
                     });
@@ -695,9 +737,16 @@ pub fn app() -> Html {
         },
     ];
 
-    // Memory data
-    let memory = (*cpu).get_memory_slice(0, 128);
-    let pc = (*cpu).pc() as u16;
+    // Memory data — multi-region display
+    let program_end = (*cpu).get_program_end();
+    let program_bytes = std::cmp::min(program_end as usize, 256).max(32);
+    // Round up to next multiple of 16 for clean display
+    let program_bytes = ((program_bytes + 15) / 16) * 16;
+    let memory_program = (*cpu).get_memory_slice(0, program_bytes as u32);
+    let sp = (*cpu).read_register(4); // r4 = SP
+    let stack_display_bytes: u32 = 64;
+    let memory_stack = (*cpu).get_memory_slice(sp, stack_display_bytes);
+    let pc = (*cpu).pc();
 
     // Get examples for the modal
     let examples = get_examples();
@@ -843,11 +892,20 @@ pub fn app() -> Html {
                     </Collapsible>
 
                     <MemoryViewer
-                        memory={memory}
+                        memory={memory_program.clone()}
                         pc={pc}
-                        title={Some("Memory (First 128 Bytes)".to_string())}
+                        base_address={0u32}
+                        title={Some(format!("Program (0x000000 \u{2192} 0x{:06X})", program_end))}
                         bytes_per_row={16}
-                        bytes_to_show={128}
+                        bytes_to_show={program_bytes}
+                    />
+                    <MemoryViewer
+                        memory={memory_stack.clone()}
+                        pc={0u32}
+                        base_address={sp}
+                        title={Some(format!("Stack (SP = 0x{:06X})", sp))}
+                        bytes_per_row={16}
+                        bytes_to_show={stack_display_bytes as usize}
                     />
                 </div>
             </div>

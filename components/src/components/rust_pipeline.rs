@@ -32,10 +32,15 @@ pub struct RustCpuState {
     pub cycle_count: u32,
     pub memory_low: Vec<u8>,
     pub memory_high: Vec<u8>,
+    pub memory_stack: Vec<u8>,          // Stack region around SP
+    pub stack_base_addr: u32,           // Base address of stack region
+    pub program_end: u32,               // End of code+data region
     pub prev_memory_low: Vec<u8>,      // Changed last step (hot)
     pub prev_memory_high: Vec<u8>,
+    pub prev_memory_stack: Vec<u8>,
     pub prev_prev_memory_low: Vec<u8>, // Changed 2 steps ago (warm)
     pub prev_prev_memory_high: Vec<u8>,
+    pub prev_prev_memory_stack: Vec<u8>,
     pub current_instruction: String,
     pub assembled_lines: Vec<String>,
 }
@@ -143,28 +148,26 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
             if current_pc != *last_pc {
                 last_pc.set(current_pc);
                 // Scroll within the listing container only
-                if let Some(window) = web_sys::window() {
-                    if let Some(document) = window.document() {
-                        if let Some(container) = document.get_element_by_id("asm-listing-scroll") {
-                            if let Some(element) = document.query_selector(".asm-line.current-line").ok().flatten() {
-                                let element_html: &web_sys::HtmlElement = element.unchecked_ref();
-                                let container_html: &web_sys::HtmlElement = container.unchecked_ref();
-                                let element_top = element_html.offset_top();
-                                let container_height = container_html.client_height();
-                                let container_scroll = container.scroll_top();
+                if let Some(window) = web_sys::window()
+                    && let Some(document) = window.document()
+                    && let Some(container) = document.get_element_by_id("asm-listing-scroll")
+                    && let Some(element) = document.query_selector(".asm-line.current-line").ok().flatten()
+                {
+                    let element_html: &web_sys::HtmlElement = element.unchecked_ref();
+                    let container_html: &web_sys::HtmlElement = container.unchecked_ref();
+                    let element_top = element_html.offset_top();
+                    let container_height = container_html.client_height();
+                    let container_scroll = container.scroll_top();
 
-                                // Only scroll if element is outside visible area
-                                let element_bottom = element_top + 20; // approx line height
-                                let visible_top = container_scroll;
-                                let visible_bottom = container_scroll + container_height;
+                    // Only scroll if element is outside visible area
+                    let element_bottom = element_top + 20; // approx line height
+                    let visible_top = container_scroll;
+                    let visible_bottom = container_scroll + container_height;
 
-                                if element_top < visible_top || element_bottom > visible_bottom {
-                                    // Center the element in the container
-                                    let target_scroll = element_top - (container_height / 2);
-                                    container.set_scroll_top(target_scroll.max(0));
-                                }
-                            }
-                        }
+                    if element_top < visible_top || element_bottom > visible_bottom {
+                        // Center the element in the container
+                        let target_scroll = element_top - (container_height / 2);
+                        container.set_scroll_top(target_scroll.max(0));
                     }
                 }
             }
@@ -180,10 +183,10 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
             if let Some(select) = target {
                 let idx = select.selected_index();
                 // Index 0 is "Choose an example...", so subtract 1 for actual examples
-                if idx > 0 {
-                    if let Some(example) = examples.get((idx - 1) as usize) {
-                        selected_example.set(Some(example.clone()));
-                    }
+                if idx > 0
+                    && let Some(example) = examples.get((idx - 1) as usize)
+                {
+                    selected_example.set(Some(example.clone()));
                 }
             }
         })
@@ -218,12 +221,11 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
                 load_dialog_open.set(false);
                 // Scroll notebook to top to show source cell
                 gloo::timers::callback::Timeout::new(50, || {
-                    if let Some(window) = web_sys::window() {
-                        if let Some(document) = window.document() {
-                            if let Some(container) = document.get_element_by_id("notebook-scroll") {
-                                container.set_scroll_top(0);
-                            }
-                        }
+                    if let Some(window) = web_sys::window()
+                        && let Some(document) = window.document()
+                        && let Some(container) = document.get_element_by_id("notebook-scroll")
+                    {
+                        container.set_scroll_top(0);
                     }
                 }).forget();
             }
@@ -247,15 +249,13 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
                 };
 
                 gloo::timers::callback::Timeout::new(100, move || {
-                    if let Some(window) = web_sys::window() {
-                        if let Some(document) = window.document() {
-                            if let Some(container) = document.get_element_by_id("notebook-scroll") {
-                                if let Some(element) = document.get_element_by_id(&scroll_to_cell) {
-                                    let element_html: &web_sys::HtmlElement = element.unchecked_ref();
-                                    container.set_scroll_top(element_html.offset_top());
-                                }
-                            }
-                        }
+                    if let Some(window) = web_sys::window()
+                        && let Some(document) = window.document()
+                        && let Some(container) = document.get_element_by_id("notebook-scroll")
+                        && let Some(element) = document.get_element_by_id(&scroll_to_cell)
+                    {
+                        let element_html: &web_sys::HtmlElement = element.unchecked_ref();
+                        container.set_scroll_top(element_html.offset_top());
                     }
                 }).forget();
             }
@@ -271,15 +271,13 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
                 if step <= *current_step {
                     // Scroll to the cell - align at top
                     let cell_id = step.cell_id().to_string();
-                    if let Some(window) = web_sys::window() {
-                        if let Some(document) = window.document() {
-                            if let Some(container) = document.get_element_by_id("notebook-scroll") {
-                                if let Some(element) = document.get_element_by_id(&cell_id) {
-                                    let element_html: &web_sys::HtmlElement = element.unchecked_ref();
-                                    container.set_scroll_top(element_html.offset_top());
-                                }
-                            }
-                        }
+                    if let Some(window) = web_sys::window()
+                        && let Some(document) = window.document()
+                        && let Some(container) = document.get_element_by_id("notebook-scroll")
+                        && let Some(element) = document.get_element_by_id(&cell_id)
+                    {
+                        let element_html: &web_sys::HtmlElement = element.unchecked_ref();
+                        container.set_scroll_top(element_html.offset_top());
                     }
                 }
             })
@@ -586,16 +584,22 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
                                             <span>{"Cycles: "}{state.cycle_count}</span>
                                         </div>
 
-                                        // Memory viewer - dual panels
+                                        // Memory viewer - three regions
                                         if props.is_loaded {
                                             <div class="memory-section">
-                                                <h4>{"Memory (Low: 0x000000→)"}</h4>
+                                                <h4>{format!("Program (0x000000 \u{2192} 0x{:06X})", state.program_end)}</h4>
                                                 <div class="memory-dump-compact">{
                                                     format_memory_dump_heatmap(&state.memory_low, &state.prev_memory_low, &state.prev_prev_memory_low, 0x000000)
                                                 }</div>
                                             </div>
                                             <div class="memory-section">
-                                                <h4>{"Memory (High: ←0xFFFFFF)"}</h4>
+                                                <h4>{format!("Stack (SP = 0x{:06X})", state.stack_base_addr)}</h4>
+                                                <div class="memory-dump-compact">{
+                                                    format_memory_dump_heatmap(&state.memory_stack, &state.prev_memory_stack, &state.prev_prev_memory_stack, state.stack_base_addr)
+                                                }</div>
+                                            </div>
+                                            <div class="memory-section">
+                                                <h4>{"I/O (0xFFFF80 \u{2192})"}</h4>
                                                 <div class="memory-dump-compact">{
                                                     format_memory_dump_reversed_heatmap(&state.memory_high, &state.prev_memory_high, &state.prev_prev_memory_high, 0xFFFF80)
                                                 }</div>

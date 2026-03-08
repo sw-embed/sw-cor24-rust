@@ -51,12 +51,15 @@ pub struct CpuSnapshot {
 }
 
 /// The shared emulator core
+#[derive(Clone)]
 pub struct EmulatorCore {
     cpu: CpuState,
     executor: Executor,
     decode_rom: DecodeRom,
     breakpoints: Vec<u32>,
     paused: bool,
+    /// Highest address written during load (tracks end of code+data)
+    program_end: u32,
 }
 
 impl Default for EmulatorCore {
@@ -73,6 +76,7 @@ impl EmulatorCore {
             decode_rom: DecodeRom::new(),
             breakpoints: Vec::new(),
             paused: true, // start paused
+            program_end: 0,
         }
     }
 
@@ -85,12 +89,17 @@ impl EmulatorCore {
         let start = entry.or(result.start_addr).unwrap_or(0);
         self.cpu.pc = start;
         self.paused = true;
+        self.program_end = result.highest_address;
         Ok(result.bytes_loaded)
     }
 
     /// Load assembled bytes into memory at given address
     pub fn load_program(&mut self, addr: u32, bytes: &[u8]) {
         self.cpu.load_program(addr, bytes);
+        let end = addr + bytes.len() as u32;
+        if end > self.program_end {
+            self.program_end = end;
+        }
     }
 
     /// Reset CPU (preserves memory)
@@ -312,6 +321,11 @@ impl EmulatorCore {
 
     pub fn cycles(&self) -> u64 {
         self.cpu.cycles
+    }
+
+    /// Highest address written during load (end of code+data region)
+    pub fn program_end(&self) -> u32 {
+        self.program_end
     }
 
     pub fn instructions_count(&self) -> u64 {

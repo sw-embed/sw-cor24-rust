@@ -487,15 +487,14 @@ impl Assembler {
         // Check for sub sp,imm24 pattern
         if operands[0].to_lowercase() == "sp"
             && let Some(imm) = self.parse_number(operands[1])
+            && let Some(byte) = encode::encode_sub_sp()
         {
-            if let Some(byte) = encode::encode_sub_sp() {
-                return vec![
-                    byte,
-                    (imm & 0xFF) as u8,
-                    ((imm >> 8) & 0xFF) as u8,
-                    ((imm >> 16) & 0xFF) as u8,
-                ];
-            }
+            return vec![
+                byte,
+                (imm & 0xFF) as u8,
+                ((imm >> 8) & 0xFF) as u8,
+                ((imm >> 16) & 0xFF) as u8,
+            ];
         }
 
         // sub ra,rb

@@ -3,7 +3,10 @@ use yew::prelude::*;
 #[derive(Properties, PartialEq)]
 pub struct MemoryViewerProps {
     pub memory: Vec<u8>,
-    pub pc: u16,
+    pub pc: u32,
+    /// Base address of the memory region (for display)
+    #[prop_or(0)]
+    pub base_address: u32,
     #[prop_or(128)]
     pub bytes_to_show: usize,
     #[prop_or(16)]
@@ -38,20 +41,23 @@ pub fn memory_viewer(props: &MemoryViewerProps) -> Html {
         .clone()
         .unwrap_or_else(|| format!("Memory (First {} Bytes)", props.bytes_to_show));
 
+    let base = props.base_address;
     let rows = (0..props.bytes_to_show)
         .step_by(props.bytes_per_row)
-        .map(|addr| {
+        .map(|offset| {
+            let display_addr = base + offset as u32;
             html! {
-                <div class="memory-row" key={addr}>
+                <div class="memory-row" key={offset}>
                     <span class="memory-address">
-                        {format!("{:04X}:", addr)}
+                        {format!("{:06X}:", display_addr)}
                     </span>
                     { for (0..props.bytes_per_row).map(|i| {
-                        let byte_addr = addr + i;
-                        if byte_addr < props.memory.len() {
-                            let byte = props.memory[byte_addr];
-                            let is_pc = byte_addr == props.pc as usize;
-                            let is_changed = props.changed_addresses.contains(&byte_addr);
+                        let byte_offset = offset + i;
+                        if byte_offset < props.memory.len() {
+                            let byte = props.memory[byte_offset];
+                            let abs_addr = base + byte_offset as u32;
+                            let is_pc = abs_addr == props.pc;
+                            let is_changed = props.changed_addresses.contains(&byte_offset);
 
                             let class = if is_pc {
                                 "memory-byte pc-highlight"
@@ -62,13 +68,13 @@ pub fn memory_viewer(props: &MemoryViewerProps) -> Html {
                             };
 
                             html! {
-                                <span {class} key={byte_addr}>
+                                <span {class} key={byte_offset}>
                                     {format!("{:02X}", byte)}
                                 </span>
                             }
                         } else {
                             html! {
-                                <span class="memory-byte" key={byte_addr}>
+                                <span class="memory-byte" key={byte_offset}>
                                     {"  "}
                                 </span>
                             }

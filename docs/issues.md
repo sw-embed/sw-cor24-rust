@@ -69,7 +69,7 @@ Currently using pre-built examples (LED Blink, Add Function) until server infras
 
 ### Memory Viewer
 
-- Only shows first 128 bytes
+- ~~Only shows first 128 bytes~~ Now shows three regions: Program (0→program_end), Stack (around SP), I/O (0xFFFF80→)
 - No scrolling to view full 16MB address space
 - No memory editing capability
 

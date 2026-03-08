@@ -1,5 +1,5 @@
 /**
- * WASM-accessible CPU wrapper
+ * WASM-accessible CPU wrapper backed by EmulatorCore
  */
 export class WasmCpu {
     __destroy_into_raw() {
@@ -67,7 +67,7 @@ export class WasmCpu {
         return ret !== 0;
     }
     /**
-     * Get the current instruction disassembly
+     * Get the current instruction disassembly (uses EmulatorCore's disassembler)
      * @returns {string}
      */
     get_current_instruction() {
@@ -124,6 +124,14 @@ export class WasmCpu {
      */
     get_pc() {
         const ret = wasm.wasmcpu_get_pc(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * Get the end address of loaded program (highest address written)
+     * @returns {number}
+     */
+    get_program_end() {
+        const ret = wasm.wasmcpu_get_program_end(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -242,6 +250,15 @@ export class WasmCpu {
         }
     }
     /**
+     * Run a batch of instructions (for animated execution)
+     * @param {number} max_instructions
+     * @returns {boolean}
+     */
+    run_batch(max_instructions) {
+        const ret = wasm.wasmcpu_run_batch(this.__wbg_ptr, max_instructions);
+        return ret !== 0;
+    }
+    /**
      * Set switch state (simulates external switch input)
      * @param {number} value
      */
@@ -250,7 +267,6 @@ export class WasmCpu {
     }
     /**
      * Check if should stop for LED output (for animation purposes)
-     * Returns true after a reasonable number of cycles to prevent infinite loops
      * @returns {boolean}
      */
     should_stop_for_led() {
@@ -305,7 +321,6 @@ export function init() {
 
 /**
  * Validate a solution for a challenge
- * Returns true if the solution passes
  * @param {number} challenge_id
  * @param {string} source
  * @returns {boolean}
@@ -723,18 +738,18 @@ function __wbg_get_imports() {
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 612, function: Function { arguments: [Ref(NamedExternref("Event"))], shim_idx: 606, ret: Unit, inner_ret: Some(Unit) }, mutable: false }) -> Externref`.
-            const ret = makeClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h02c8d98c836549e5, wasm_bindgen__convert__closures________invoke__hf1c09b4213cbe6c0);
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 545, function: Function { arguments: [], shim_idx: 544, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h297bb4d7a0cfe5f0, wasm_bindgen__convert__closures_____invoke__h5c358c90429b0a8b);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 667, function: Function { arguments: [], shim_idx: 663, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h131df9b245e3e21d, wasm_bindgen__convert__closures_____invoke__h1a03138ab7b6f6de);
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 640, function: Function { arguments: [Ref(NamedExternref("Event"))], shim_idx: 574, ret: Unit, inner_ret: Some(Unit) }, mutable: false }) -> Externref`.
+            const ret = makeClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h5f18380b9a8ccb6e, wasm_bindgen__convert__closures________invoke__h0b812f37b2dd100f);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 668, function: Function { arguments: [Externref], shim_idx: 686, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-            const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__hf97f17c9c95398e5, wasm_bindgen__convert__closures_____invoke__h0bcb239972d1a1d5);
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 671, function: Function { arguments: [Externref], shim_idx: 691, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen__closure__destroy__h37880e3b53931063, wasm_bindgen__convert__closures_____invoke__hf5364d4912d915f2);
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0) {
@@ -763,16 +778,16 @@ function __wbg_get_imports() {
     };
 }
 
-function wasm_bindgen__convert__closures_____invoke__h1a03138ab7b6f6de(arg0, arg1) {
-    wasm.wasm_bindgen__convert__closures_____invoke__h1a03138ab7b6f6de(arg0, arg1);
+function wasm_bindgen__convert__closures_____invoke__h5c358c90429b0a8b(arg0, arg1) {
+    wasm.wasm_bindgen__convert__closures_____invoke__h5c358c90429b0a8b(arg0, arg1);
 }
 
-function wasm_bindgen__convert__closures________invoke__hf1c09b4213cbe6c0(arg0, arg1, arg2) {
-    wasm.wasm_bindgen__convert__closures________invoke__hf1c09b4213cbe6c0(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures________invoke__h0b812f37b2dd100f(arg0, arg1, arg2) {
+    wasm.wasm_bindgen__convert__closures________invoke__h0b812f37b2dd100f(arg0, arg1, arg2);
 }
 
-function wasm_bindgen__convert__closures_____invoke__h0bcb239972d1a1d5(arg0, arg1, arg2) {
-    const ret = wasm.wasm_bindgen__convert__closures_____invoke__h0bcb239972d1a1d5(arg0, arg1, arg2);
+function wasm_bindgen__convert__closures_____invoke__hf5364d4912d915f2(arg0, arg1, arg2) {
+    const ret = wasm.wasm_bindgen__convert__closures_____invoke__hf5364d4912d915f2(arg0, arg1, arg2);
     if (ret[1]) {
         throw takeFromExternrefTable0(ret[0]);
     }

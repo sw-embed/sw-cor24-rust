@@ -227,9 +227,11 @@ cd docs/research/asld24
 ```
 Then: `cor24-dbg sieve.lgo` should run and produce `1899 primes.` on the UART output.
 
-### Phase 5: Web UI updates (deferred)
+### Phase 5: Web UI updates (in progress)
 
-Once the CLI is correct, port fixes to `app.rs` and WASM bindings. Not in scope now.
+Port fixes to `app.rs` and WASM bindings. WasmCpu now wraps EmulatorCore for
+consistent behavior with the CLI. Multi-region memory display shows Program,
+Stack, and I/O regions with change-highlighting heatmaps.
 
 ---
 
@@ -536,11 +538,14 @@ fn test_sieve_produces_correct_output() {
 - [ ] Assemble each with `as24`, load with debugger, verify behavior
 - [ ] Cross-check all instruction encodings against `as24 -l` listings
 
-### Phase 5: Web UI (deferred)
+### Phase 5: Web UI (in progress)
 
-- [ ] Port memory model fixes to `app.rs`
-- [ ] Port UART address fixes
-- [ ] Port LED/switch fixes
+- [x] Port memory model fixes to `app.rs`
+- [x] Port UART address fixes
+- [x] Port LED/switch fixes
+- [x] WasmCpu wraps EmulatorCore (consistent with CLI)
+- [x] Multi-region memory display: Program, Stack, I/O
+- [x] program_end tracking for dynamic program region sizing
 - [ ] Update examples and challenges
 - [ ] Test in browser
 

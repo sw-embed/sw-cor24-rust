@@ -16,6 +16,8 @@ pub struct LoadResult {
     pub start_addr: Option<u32>,
     /// Total bytes loaded
     pub bytes_loaded: usize,
+    /// Highest address written (end of code+data region)
+    pub highest_address: u32,
 }
 
 /// Parse a single LGO L-line, returning (address, bytes)
@@ -30,7 +32,7 @@ pub fn parse_lgo_load_line(line: &str) -> Result<(u32, Vec<u8>), String> {
         .map_err(|e| format!("Bad address '{}': {}", addr_str, e))?;
 
     let data_str = &line[7..];
-    if data_str.len() % 2 != 0 {
+    if !data_str.len().is_multiple_of(2) {
         return Err(format!("Odd number of hex digits in data: '{}'", data_str));
     }
 
@@ -60,6 +62,7 @@ pub fn parse_lgo_go_line(line: &str) -> Result<u32, String> {
 pub fn load_lgo(content: &str, cpu: &mut CpuState) -> Result<LoadResult, String> {
     let mut start_addr = None;
     let mut bytes_loaded = 0usize;
+    let mut highest_address = 0u32;
 
     for (line_num, line) in content.lines().enumerate() {
         let line = line.trim();
@@ -73,6 +76,10 @@ pub fn load_lgo(content: &str, cpu: &mut CpuState) -> Result<LoadResult, String>
                     .map_err(|e| format!("Line {}: {}", line_num + 1, e))?;
                 for (i, &byte) in bytes.iter().enumerate() {
                     cpu.write_byte(addr + i as u32, byte);
+                }
+                let end = addr + bytes.len() as u32;
+                if end > highest_address {
+                    highest_address = end;
                 }
                 bytes_loaded += bytes.len();
             }
@@ -94,6 +101,7 @@ pub fn load_lgo(content: &str, cpu: &mut CpuState) -> Result<LoadResult, String>
     Ok(LoadResult {
         start_addr,
         bytes_loaded,
+        highest_address,
     })
 }
 
