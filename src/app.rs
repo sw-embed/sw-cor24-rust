@@ -362,7 +362,7 @@ pub fn app() -> Html {
                     condition_flag: new_cpu.get_condition_flag(),
                     is_halted: new_cpu.is_halted(),
                     led_value: new_cpu.get_led_value(),
-                    cycle_count: new_cpu.get_cycle_count(),
+                    instruction_count: new_cpu.get_instruction_count(),
                     memory_low: memory_low.clone(),
                     memory_high: memory_high.clone(),
                     memory_stack: memory_stack.clone(),
@@ -423,7 +423,7 @@ pub fn app() -> Html {
                     condition_flag: new_cpu.get_condition_flag(),
                     is_halted: new_cpu.is_halted(),
                     led_value: new_cpu.get_led_value(),
-                    cycle_count: new_cpu.get_cycle_count(),
+                    instruction_count: new_cpu.get_instruction_count(),
                     memory_low,
                     memory_high,
                     memory_stack,
@@ -556,7 +556,7 @@ pub fn app() -> Html {
                         condition_flag: current_cpu.get_condition_flag(),
                         is_halted: current_cpu.is_halted(),
                         led_value: current_cpu.get_led_value(),
-                        cycle_count: current_cpu.get_cycle_count(),
+                        instruction_count: current_cpu.get_instruction_count(),
                         memory_low,
                         memory_high,
                         memory_stack,
@@ -657,7 +657,7 @@ pub fn app() -> Html {
                         condition_flag: new_cpu.get_condition_flag(),
                         is_halted: new_cpu.is_halted(),
                         led_value: new_cpu.get_led_value(),
-                        cycle_count: new_cpu.get_cycle_count(),
+                        instruction_count: new_cpu.get_instruction_count(),
                         memory_low: memory_low.clone(),
                         memory_high: memory_high.clone(),
                         memory_stack: memory_stack.clone(),
@@ -871,10 +871,6 @@ pub fn app() -> Html {
                             </div>
                         </div>
                         <div class="status-right">
-                            <div class="status-item">
-                                <span class="status-label">{"Cycles:"}</span>
-                                <span class="status-value">{(*cpu).cycle_count()}</span>
-                            </div>
                             <div class="status-item">
                                 <span class="status-label">{"Instructions:"}</span>
                                 <span class="status-value">{(*cpu).instruction_count()}</span>

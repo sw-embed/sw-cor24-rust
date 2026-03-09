@@ -1942,7 +1942,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cycle_count() {
+    fn test_instruction_count() {
         let mut cpu = CpuState::new();
         let executor = Executor::new();
 
@@ -1951,15 +1951,12 @@ mod tests {
         cpu.write_byte(1, inst_byte);
         cpu.write_byte(2, inst_byte);
 
-        assert_eq!(cpu.cycles, 0);
         assert_eq!(cpu.instructions, 0);
 
         executor.step(&mut cpu);
-        assert_eq!(cpu.cycles, 1);
         assert_eq!(cpu.instructions, 1);
 
         executor.step(&mut cpu);
-        assert_eq!(cpu.cycles, 2);
         assert_eq!(cpu.instructions, 2);
     }
 

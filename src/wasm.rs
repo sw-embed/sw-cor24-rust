@@ -143,11 +143,6 @@ impl WasmCpu {
         self.emu.pc()
     }
 
-    /// Get cycle count
-    pub fn cycle_count(&self) -> u64 {
-        self.emu.cycles()
-    }
-
     /// Get instruction count
     pub fn instruction_count(&self) -> u64 {
         self.emu.instructions_count()
@@ -235,9 +230,9 @@ impl WasmCpu {
         self.emu.get_led()
     }
 
-    /// Get cycle count as u32 (truncated from u64)
-    pub fn get_cycle_count(&self) -> u32 {
-        self.emu.cycles() as u32
+    /// Get instruction count as u32 (truncated from u64)
+    pub fn get_instruction_count(&self) -> u32 {
+        self.emu.instructions_count() as u32
     }
 
     /// Read a byte from memory (alias for read_memory())

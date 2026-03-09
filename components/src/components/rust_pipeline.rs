@@ -29,7 +29,7 @@ pub struct RustCpuState {
     pub condition_flag: bool,
     pub is_halted: bool,
     pub led_value: u8,
-    pub cycle_count: u32,
+    pub instruction_count: u32,
     pub memory_low: Vec<u8>,
     pub memory_high: Vec<u8>,
     pub memory_stack: Vec<u8>,          // Stack region around SP
@@ -581,7 +581,7 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
                                         </div>
 
                                         <div class="cycle-info">
-                                            <span>{"Cycles: "}{state.cycle_count}</span>
+                                            <span>{"Instructions: "}{state.instruction_count}</span>
                                         </div>
 
                                         // Memory viewer - three regions
