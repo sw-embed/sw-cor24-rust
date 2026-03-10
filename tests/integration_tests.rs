@@ -155,7 +155,7 @@ fn assemble_and_run(source: &str, max_cycles: u64) -> CpuState {
 #[test]
 fn test_all_examples_halt() {
     // Examples that intentionally loop forever (no halt)
-    let non_halting = ["Blink LED", "Button Echo"];
+    let non_halting = ["Blink LED", "Button Echo", "Echo"];
     let examples = get_examples();
     for (name, _desc, source) in &examples {
         if non_halting.contains(&name.as_str()) {
