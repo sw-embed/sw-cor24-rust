@@ -72,9 +72,9 @@ Currently using pre-built examples (LED Blink, Add Function) until server infras
 
 ### Memory Viewer
 
-- ~~Only shows first 128 bytes~~ Now shows three regions: Program (0→program_end), Stack (around SP), I/O (LED/Switch at 0xFF0000, UART at 0xFF0100)
-- **Full-region display with zero-row collapsing** (planned): Show complete extent of every region but collapse consecutive all-zero 16-byte rows into a single summary line (e.g., `... 48 rows (768 bytes) all zero [000030–000320] ...`). If a non-zero row exists within a collapsed range, it splits into: (1) summary of zero rows before, (2) the non-zero row, (3) summary of zero rows after. Makes region boundaries explicit without filling the screen with zeros. See implementation-plan.md §5.1.
-- No scrolling to view full 16MB address space
+- ~~Only shows first 128 bytes~~ Now shows full regions with sparse representation
+- ~~Full-region display with zero-row collapsing~~ **Implemented**: SRAM (1MB), EBR/Stack (3KB), and I/O regions shown in their entirety using `SparseMemory` data structure. Consecutive all-zero 16-byte rows are collapsed into summary lines (e.g., `000030–0000FF: (208 bytes zero)`). Non-zero rows within collapsed ranges split into before-summary, data row, after-summary.
+- Example programs (`docs/examples/oom.s`, `docs/examples/stack_overflow.s`) demonstrate the feature
 - No memory editing capability
 
 ### Registers Panel
@@ -114,30 +114,16 @@ Only one screenshot exists (`images/cor24-interface-2026-02-26T05-07-30-868Z.png
 
 ## Testing
 
-### Limited Unit Tests
+### Test Coverage (183 tests)
 
-The project has moderate test coverage (32 tests total):
-- `src/assembler.rs` - 17 tests (all instruction types)
-- `src/cpu/state.rs` - 3 tests (new, memory ops, sign extend)
-- `src/cpu/executor.rs` - 2 tests (add_immediate, lc)
-- `src/cpu/decode_rom.rs` - 5 tests (valid count, add, branch, push/pop, invalid)
-- `src/cpu/encode.rs` - 5 tests (add, push/pop, mov, branch, lc)
-
-**Missing Test Coverage**:
-- All instruction execution paths
-- Branch/jump instructions
-- Stack operations (push/pop)
-- Memory load/store operations
-- Compare instructions and condition flag
-- Forward reference resolution in assembler
-- Error handling paths
-
-### No Integration Tests
-
-No tests for:
-- Full program assembly and execution
-- Challenge validation
-- WASM bindings
+- `src/assembler.rs` — 23 tests (all instruction types, labels, integration)
+- `src/cpu/state.rs` — 22 tests (memory regions, I/O, UART, push/pop, EBR)
+- `src/cpu/executor.rs` — 99 tests (all instruction execution paths, branches, comparisons, stack ops, load/store, shifts, sieve)
+- `src/cpu/decode_rom.rs` — 5 tests (valid count, add, branch, push/pop, invalid)
+- `src/cpu/encode.rs` — 5 tests (add, push/pop, mov, branch, lc)
+- `src/emulator.rs` — 9 tests (breakpoints, run/step, I/O, sieve)
+- `src/loader.rs` — 8 tests (LGO parsing and loading)
+- `tests/integration_tests.rs` — 16 tests (full programs: LED, UART, sieve, Fibonacci, Multiply, halt detection, memory access, OOM, stack overflow)
 
 ### No CI Pipeline
 

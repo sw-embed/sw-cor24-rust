@@ -236,3 +236,31 @@ fn test_uart_hello_example() {
     executor.run(&mut cpu, 10_000);
     assert_eq!(cpu.io.uart_output, "Hello\n", "UART Hello should output 'Hello\\n'");
 }
+
+/// OOM example fills SRAM with 256-byte stride then halts
+#[test]
+fn test_oom_example() {
+    let source = include_str!("../docs/examples/oom.s");
+    let cpu = assemble_and_run(source, 500_000);
+    assert!(cpu.halted, "OOM should halt when SRAM is exhausted");
+    // First write at 0x0100 should be counter value 1
+    assert_eq!(cpu.read_byte(0x0100), 1, "First store should be 1");
+    // Second write at 0x0200 should be counter value 2
+    assert_eq!(cpu.read_byte(0x0200), 2, "Second store should be 2");
+    // Gap between writes should be zero
+    assert_eq!(cpu.read_byte(0x0150), 0, "Gap should be zero");
+}
+
+/// Stack overflow example fills EBR/Stack region then halts
+#[test]
+fn test_stack_overflow_example() {
+    let source = include_str!("../docs/examples/stack_overflow.s");
+    let cpu = assemble_and_run(source, 500_000);
+    assert!(cpu.halted, "Stack overflow should halt when EBR exhausted");
+    // SP should be at or below EBR base (0xFEE000)
+    let sp = cpu.get_reg(4);
+    assert!(sp <= 0xFEE000, "SP should be at or below EBR base, got 0x{:06X}", sp);
+    // First push writes at 0xFEEBFD (SP-3 from initial 0xFEEC00)
+    // Depth 0 is pushed, so word value is 0 — check second push pair (depth=1 at offset -12)
+    assert_ne!(cpu.read_word(0xFEEBF1), 0, "Stack should have recursion data");
+}
