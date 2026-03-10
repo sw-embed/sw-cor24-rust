@@ -844,6 +844,32 @@ pub fn app() -> Html {
         })
     };
 
+    // Assembler UART clear callback
+    let on_asm_uart_clear = {
+        let cpu = cpu.clone();
+        let asm_emu_state = asm_emu_state.clone();
+        Callback::from(move |()| {
+            let mut new_cpu = (*cpu).clone();
+            new_cpu.clear_uart_output();
+            let state = capture_cpu_state(&new_cpu, &asm_emu_state);
+            asm_emu_state.set(state);
+            cpu.set(new_cpu);
+        })
+    };
+
+    // Rust pipeline UART clear callback
+    let on_rust_uart_clear = {
+        let rust_cpu = rust_cpu.clone();
+        let rust_emu_state = rust_emu_state.clone();
+        Callback::from(move |()| {
+            let mut cpu = (*rust_cpu).clone();
+            cpu.clear_uart_output();
+            let state = capture_cpu_state(&cpu, &rust_emu_state);
+            rust_emu_state.set(state);
+            rust_cpu.set(cpu);
+        })
+    };
+
     html! {
         <div class="container">
             <Tooltip />
@@ -927,6 +953,7 @@ pub fn app() -> Html {
                         switch_value={*asm_switch_value}
                         on_switch_toggle={on_asm_switch_toggle}
                         on_uart_send={on_asm_uart_send}
+                        on_uart_clear={on_asm_uart_clear}
                         listing_scroll_id={"asm-debug-listing-scroll".to_string()}
                         show_listing={false}
                     />
@@ -950,6 +977,7 @@ pub fn app() -> Html {
                     switch_value={*rust_switch_value}
                     on_switch_toggle={on_rust_switch_toggle}
                     on_uart_send={on_rust_uart_send}
+                    on_uart_clear={on_rust_uart_clear}
                     on_tutorial_open={
                         let tutorial_open = tutorial_open.clone();
                         Callback::from(move |_| tutorial_open.set(true))

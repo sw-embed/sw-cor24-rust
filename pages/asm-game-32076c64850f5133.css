@@ -1899,6 +1899,23 @@ header h1 {
     white-space: pre;
 }
 
+.uart-clear-btn {
+    background: none;
+    border: 1px solid #555;
+    color: #aaa;
+    font-size: 0.85em;
+    padding: 0 4px;
+    margin-left: 6px;
+    cursor: pointer;
+    border-radius: 3px;
+    line-height: 1;
+}
+
+.uart-clear-btn:hover {
+    color: #fff;
+    border-color: #888;
+}
+
 .memory-section {
     margin-top: 12px;
 }

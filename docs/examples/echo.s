@@ -14,6 +14,11 @@
         lc      r0, 1
         sb      r0, 0(r1)       ; enable UART RX interrupt
 
+; --- Print prompt ---
+        la      r1, 0xFF0100
+        lc      r0, 0x3F        ; '?'
+        sb      r0, 0(r1)       ; transmit prompt
+
 ; --- Main loop: spin forever (two instructions to avoid halt detection) ---
 idle:   lc      r0, 0
         bra     idle

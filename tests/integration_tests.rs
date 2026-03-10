@@ -314,26 +314,27 @@ fn test_echo_example() {
     cpu.pc = 0;
     let executor = Executor::new();
 
-    // Run to reach idle loop
+    // Run to reach idle loop — prompt '?' should appear
     executor.run(&mut cpu, 100);
+    assert_eq!(cpu.io.uart_output, "?", "Prompt '?' should appear on startup");
 
     // Send 'a' -> should echo "Aa"
     cpu.uart_send_rx(b'a');
     executor.run(&mut cpu, 1000);
-    assert_eq!(cpu.io.uart_output, "Aa", "Lowercase 'a' should echo 'Aa'");
+    assert_eq!(cpu.io.uart_output, "?Aa", "Lowercase 'a' should echo 'Aa'");
 
     // Send 'B' -> should echo "Bb"
     cpu.uart_send_rx(b'B');
     executor.run(&mut cpu, 1000);
-    assert_eq!(cpu.io.uart_output, "AaBb", "'B' should echo 'Bb'");
+    assert_eq!(cpu.io.uart_output, "?AaBb", "'B' should echo 'Bb'");
 
     // Send '?' (0x3F) -> should echo "3F"
     cpu.uart_send_rx(b'?');
     executor.run(&mut cpu, 1000);
-    assert_eq!(cpu.io.uart_output, "AaBb3F", "'?' should echo hex '3F'");
+    assert_eq!(cpu.io.uart_output, "?AaBb3F", "'?' should echo hex '3F'");
 
     // Send '<' (0x3C) -> should echo "3C"
     cpu.uart_send_rx(b'<');
     executor.run(&mut cpu, 1000);
-    assert_eq!(cpu.io.uart_output, "AaBb3F3C", "'<' should echo hex '3C'");
+    assert_eq!(cpu.io.uart_output, "?AaBb3F3C", "'<' should echo hex '3C'");
 }

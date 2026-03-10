@@ -35,6 +35,9 @@ pub struct DebugPanelProps {
     pub on_switch_toggle: Callback<u8>,
     /// Send a byte to UART RX (triggers interrupt if enabled)
     pub on_uart_send: Callback<u8>,
+    /// Clear UART TX output buffer
+    #[prop_or_default]
+    pub on_uart_clear: Callback<()>,
     /// Optional scroll container ID for assembly listing auto-scroll
     #[prop_or_default]
     pub listing_scroll_id: Option<String>,
@@ -337,6 +340,15 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
                                         format_uart_output(&state.uart_output)
                                     }
                                 }</span>
+                                if !state.uart_output.is_empty() {
+                                    <button class="uart-clear-btn"
+                                        data-tooltip="Clear UART output"
+                                        onclick={
+                                            let cb = props.on_uart_clear.clone();
+                                            Callback::from(move |_| cb.emit(()))
+                                        }
+                                    >{"×"}</button>
+                                }
                             </div>
                         </div>
                     </div>
