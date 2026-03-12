@@ -62,11 +62,28 @@ enum MspOperand {
 }
 
 /// Translate MSP430 assembly text to COR24 assembly text.
-pub fn translate_msp430(msp_asm: &str) -> Result<String> {
+///
+/// If `entry_point` is `Some("func")`, a jump prologue is emitted at address 0
+/// so the CPU enters `func` regardless of section ordering.
+/// If `None`, auto-detects the entry point by looking for `demo_*` or `main`
+/// among `.globl` symbols. If no entry point is found, no prologue is emitted.
+pub fn translate_msp430(msp_asm: &str, entry_point: Option<&str>) -> Result<String> {
     let lines = parse_msp430(msp_asm)?;
+
+    // Determine entry point: explicit, or auto-detect from .globl directives
+    let entry = entry_point.map(|s| s.to_string()).or_else(|| {
+        detect_entry_point(&lines)
+    });
+
     let mut out = String::new();
     out.push_str("; COR24 Assembly - Generated from MSP430 via msp430-to-cor24\n");
     out.push_str("; Pipeline: Rust -> rustc (msp430-none-elf) -> MSP430 ASM -> COR24 ASM\n\n");
+
+    // Emit reset vector: jump to entry point at address 0
+    if let Some(ref entry_name) = entry {
+        out.push_str(&format!("; Reset vector -> {}\n", entry_name));
+        out.push_str(&format!("    bra     {}\n\n", entry_name));
+    }
 
     // Track which functions we're in for context
     let mut in_text_section = false;
@@ -119,6 +136,39 @@ pub fn translate_msp430(msp_asm: &str) -> Result<String> {
     }
 
     Ok(out)
+}
+
+/// Auto-detect entry point from `.globl` directives in MSP430 assembly.
+/// Prefers `demo_*` or `main` functions. Skips mangled names and known helpers.
+fn detect_entry_point(lines: &[MspLine]) -> Option<String> {
+    let mut globl_names: Vec<String> = Vec::new();
+
+    for line in lines {
+        if let MspLine::Directive(d) = line {
+            if let Some(name) = d.strip_prefix(".globl\t").or_else(|| d.strip_prefix(".globl ")) {
+                let name = name.trim();
+                globl_names.push(name.to_string());
+            }
+        }
+    }
+
+    // First: look for demo_* or main
+    for name in &globl_names {
+        if name.starts_with("demo_") || name == "main" {
+            return Some(name.clone());
+        }
+    }
+
+    // Fallback: first non-mangled, non-helper globl
+    let helpers = ["mmio_write", "mmio_read", "delay", "uart_putc", "fibonacci",
+                   "accumulate", "level_a", "level_b", "level_c", "print_num"];
+    for name in &globl_names {
+        if !name.starts_with('_') && !name.starts_with(".") && !helpers.contains(&name.as_str()) {
+            return Some(name.clone());
+        }
+    }
+
+    None
 }
 
 /// Map MSP430 register number to COR24 register name.
@@ -1108,7 +1158,7 @@ add:
 	add	r13, r12
 	ret
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         assert!(result.contains("add     r0, r1"));
         // ret = pop r2 + jmp (r2)
         assert!(result.contains("pop     r2"));
@@ -1124,7 +1174,7 @@ bitmask:
 	and	r13, r12
 	ret
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         assert!(result.contains("and     r0, r1"));
     }
 
@@ -1136,7 +1186,7 @@ test:
 	mov	#1000, r12
 	ret
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         assert!(result.contains("la      r0, 0x0003E8"));
     }
 
@@ -1151,7 +1201,7 @@ compare_branch:
 .LBB4_2:
 	ret
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         assert!(result.contains("clu     r0, r1"));
         assert!(result.contains("brt     .LBB4_2"));
     }
@@ -1174,7 +1224,7 @@ blink_loop:
 	call	#delay
 	jmp	.LBB2_1
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         assert!(result.contains("bra     .LBB2_1"));
         // Should have stack-based calls (push return addr, jmp)
         assert!(result.contains("la      r2, mmio_write"));
@@ -1197,7 +1247,7 @@ button_echo:
 	call	#mmio_write
 	jmp	.LBB3_1
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         // Should translate the AND #1 pattern
         assert!(result.contains("and"));
     }
@@ -1220,7 +1270,7 @@ demo_countdown:
 	tst	r10
 	jne	.LBB5_1
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         // push r10: load spill_10 into r0, push r0
         assert!(result.contains("lw      r0, 18(fp)"));
         assert!(result.contains("push    r0"));
@@ -1257,7 +1307,7 @@ fibonacci:
 	mov	r13, r12
 	ret
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         // r15 -> spill_15 (offset 24), r11 -> spill_11 (offset 21)
         // mov r13, r11: store r1 to spill_11 slot
         assert!(result.contains("sw      r1, 21(fp)"));
@@ -1287,7 +1337,7 @@ delay:
 	add	#2, r1
 	ret
 "#;
-        let result = translate_msp430(msp430).unwrap();
+        let result = translate_msp430(msp430, None).unwrap();
         // Should have scaled stack adjustment (2 MSP430 bytes → 3 COR24 bytes)
         assert!(result.contains("sub     sp, 3"));
         // Should have store to stack (via temp reg since COR24 can't use sp as base)

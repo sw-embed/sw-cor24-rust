@@ -14,29 +14,44 @@ use std::fs;
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() < 2 {
-        eprintln!("Usage: msp430-to-cor24 <input.s> [-o output.s]");
-        eprintln!("       msp430-to-cor24 --test");
-        eprintln!("       msp430-to-cor24 --compile <rust-project-dir>");
-        std::process::exit(1);
+    // Parse named flags from anywhere in args
+    let mut entry_point: Option<String> = None;
+    let mut output_path: Option<String> = None;
+    let mut positional: Vec<String> = Vec::new();
+
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--entry" | "-e" => {
+                i += 1;
+                entry_point = args.get(i).cloned();
+            }
+            "-o" => {
+                i += 1;
+                output_path = args.get(i).cloned();
+            }
+            _ => positional.push(args[i].clone()),
+        }
+        i += 1;
     }
 
-    match args[1].as_str() {
+    let cmd = positional.first().map(|s| s.as_str()).unwrap_or("");
+
+    match cmd {
         "--test" => run_test(),
         "--compile" => {
-            let dir = args.get(2).map(|s| s.as_str()).unwrap_or(".");
-            compile_and_translate(dir)
+            let dir = positional.get(1).map(|s| s.as_str()).unwrap_or(".");
+            compile_and_translate(dir, entry_point.as_deref())
         }
-        _ => {
-            let input_path = &args[1];
-            let output_path = if args.len() >= 4 && args[2] == "-o" {
-                Some(args[3].clone())
-            } else {
-                None
-            };
-
+        "" => {
+            eprintln!("Usage: msp430-to-cor24 <input.s> [-o output.s] [--entry <func>]");
+            eprintln!("       msp430-to-cor24 --test");
+            eprintln!("       msp430-to-cor24 --compile <rust-project-dir> [--entry <func>]");
+            std::process::exit(1);
+        }
+        input_path => {
             let msp430_asm = fs::read_to_string(input_path)?;
-            let cor24_asm = wasm2cor24::translate_msp430(&msp430_asm)?;
+            let cor24_asm = wasm2cor24::translate_msp430(&msp430_asm, entry_point.as_deref())?;
 
             if let Some(out_path) = output_path {
                 fs::write(&out_path, &cor24_asm)?;
@@ -194,7 +209,7 @@ shift_and_mask:
 	.size	shift_and_mask, .Lfunc_end8-shift_and_mask
 "#;
 
-    let cor24_asm = wasm2cor24::translate_msp430(msp430_asm)?;
+    let cor24_asm = wasm2cor24::translate_msp430(msp430_asm, None)?;
 
     println!("=== MSP430 -> COR24 Translation ===\n");
     println!("{}", cor24_asm);
@@ -223,7 +238,7 @@ shift_and_mask:
 }
 
 /// Compile a Rust project to MSP430 assembly, then translate to COR24
-fn compile_and_translate(dir: &str) -> Result<()> {
+fn compile_and_translate(dir: &str, entry_point: Option<&str>) -> Result<()> {
     use std::process::Command;
 
     eprintln!("Compiling {} to MSP430 assembly...", dir);
@@ -258,7 +273,7 @@ fn compile_and_translate(dir: &str) -> Result<()> {
     eprintln!("Found MSP430 assembly: {}", asm_path.display());
 
     let msp430_asm = fs::read_to_string(&asm_path)?;
-    let cor24_asm = wasm2cor24::translate_msp430(&msp430_asm)?;
+    let cor24_asm = wasm2cor24::translate_msp430(&msp430_asm, entry_point)?;
 
     println!("{}", cor24_asm);
 
