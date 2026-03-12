@@ -1602,7 +1602,12 @@ fn get_rust_examples() -> Vec<RustExample> {
         RustExample {
             name: "Add".to_string(),
             description: "Compute 100 + 200 + 42 = 342, return in r0".to_string(),
-            rust_source: r#"#[no_mangle]
+            rust_source: r#"#![no_std]
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+#[no_mangle]
 pub fn demo_add() -> u16 {
     let a: u16 = 100;
     let b: u16 = 200;
@@ -1623,7 +1628,28 @@ demo_add:
         RustExample {
             name: "Blink LED".to_string(),
             description: "Toggle LED with delay loop".to_string(),
-            rust_source: r#"#[no_mangle]
+            rust_source: r#"#![no_std]
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+const LED_ADDR: u16 = 0xFF00;  // maps to 0xFF0000 in COR24
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn mmio_write(addr: u16, val: u16) {
+    core::ptr::write_volatile(addr as *mut u16, val);
+}
+
+#[inline(never)]
+#[no_mangle]
+pub fn delay(mut n: u16) {
+    while n != 0 {
+        unsafe { core::ptr::write_volatile(&mut n as *mut u16, n - 1); }
+    }
+}
+
+#[no_mangle]
 pub unsafe fn demo_blinky() -> ! {
     loop {
         mmio_write(LED_ADDR, 1);   // LED on
@@ -1720,7 +1746,26 @@ delay:
         RustExample {
             name: "Button Echo".to_string(),
             description: "LED D2 follows button S2".to_string(),
-            rust_source: r#"#[no_mangle]
+            rust_source: r#"#![no_std]
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+const LED_ADDR: u16 = 0xFF00;  // maps to 0xFF0000 in COR24
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn mmio_write(addr: u16, val: u16) {
+    core::ptr::write_volatile(addr as *mut u16, val);
+}
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn mmio_read(addr: u16) -> u16 {
+    core::ptr::read_volatile(addr as *const u16)
+}
+
+#[no_mangle]
 pub unsafe fn demo_button_echo() -> ! {
     loop {
         let btn = mmio_read(LED_ADDR);
@@ -1784,7 +1829,28 @@ mmio_write:
         RustExample {
             name: "Countdown".to_string(),
             description: "Count 10→0 on LED, then halt".to_string(),
-            rust_source: r#"#[no_mangle]
+            rust_source: r#"#![no_std]
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+const LED_ADDR: u16 = 0xFF00;  // maps to 0xFF0000 in COR24
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn mmio_write(addr: u16, val: u16) {
+    core::ptr::write_volatile(addr as *mut u16, val);
+}
+
+#[inline(never)]
+#[no_mangle]
+pub fn delay(mut n: u16) {
+    while n != 0 {
+        unsafe { core::ptr::write_volatile(&mut n as *mut u16, n - 1); }
+    }
+}
+
+#[no_mangle]
 pub unsafe fn demo_countdown() {
     let mut count: u16 = 10;
     while count != 0 {
@@ -1874,21 +1940,47 @@ delay:
         RustExample {
             name: "Fibonacci".to_string(),
             description: "Print fib(1)..fib(10) to UART".to_string(),
-            rust_source: r#"// Print Fibonacci series: 1 1 2 3 5 8 13 21 34 55
-// UART TX: "1 1 2 3 5 8 13 21 34 55\n"
+            rust_source: r#"#![no_std]
 
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+const UART_DATA: u16 = 0xFF01;  // maps to 0xFF0100 in COR24
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn mmio_write(addr: u16, val: u16) {
+    core::ptr::write_volatile(addr as *mut u16, val);
+}
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn uart_putc(ch: u16) {
+    mmio_write(UART_DATA, ch);
+}
+
+// Print 1-2 digit decimal number to UART
+unsafe fn print_num(n: u16) {
+    if n >= 10 {
+        uart_putc(b'0' as u16 + n / 10);
+    }
+    uart_putc(b'0' as u16 + n % 10);
+}
+
+// Print Fibonacci series: 1 1 2 3 5 8 13 21 34 55
+// UART TX: "1 1 2 3 5 8 13 21 34 55\n"
 #[no_mangle]
 pub unsafe fn demo_fibonacci() {
     let mut a: u16 = 0;
     let mut b: u16 = 1;
     for i in 0..10 {
         print_num(b);
-        if i < 9 { uart_putc(b' '); }
+        if i < 9 { uart_putc(b' ' as u16); }
         let tmp = a + b;
         a = b;
         b = tmp;
     }
-    uart_putc(b'\n');
+    uart_putc(b'\n' as u16);
     loop {}
 }"#.to_string(),
             msp430_asm: r#"demo_fibonacci:
@@ -2022,7 +2114,12 @@ putc:
         RustExample {
             name: "Memory Access".to_string(),
             description: "Store to non-adjacent memory blocks".to_string(),
-            rust_source: r#"#[no_mangle]
+            rust_source: r#"#![no_std]
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+#[no_mangle]
 pub unsafe fn demo_memory() {
     // Write to two non-adjacent memory blocks
     let block1: *mut u8 = 0x0100 as *mut u8;
@@ -2081,9 +2178,27 @@ halt:
         RustExample {
             name: "Multiply".to_string(),
             description: "6 × 7 = 42 via loop, print to UART".to_string(),
-            rust_source: r#"// Software multiply: 6 × 7 = 42 via repeated addition
-// Prints "42\n" to UART
+            rust_source: r#"#![no_std]
 
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+const UART_DATA: u16 = 0xFF01;  // maps to 0xFF0100 in COR24
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn mmio_write(addr: u16, val: u16) {
+    core::ptr::write_volatile(addr as *mut u16, val);
+}
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn uart_putc(ch: u16) {
+    mmio_write(UART_DATA, ch);
+}
+
+// Software multiply: 6 × 7 = 42 via repeated addition
+// Prints "42\n" to UART
 #[no_mangle]
 pub unsafe fn demo_multiply() {
     let mut sum: u16 = 0;
@@ -2093,9 +2208,9 @@ pub unsafe fn demo_multiply() {
     // sum = 42, print as decimal
     let tens = sum / 10;       // 4
     let ones = sum % 10;       // 2
-    uart_putc(tens as u8 + b'0');  // '4'
-    uart_putc(ones as u8 + b'0'); // '2'
-    uart_putc(b'\n');
+    uart_putc(tens + b'0' as u16);   // '4'
+    uart_putc(ones + b'0' as u16);   // '2'
+    uart_putc(b'\n' as u16);
     loop {}
 }"#.to_string(),
             msp430_asm: r#"demo_multiply:
@@ -2195,7 +2310,20 @@ uart_putc:
         RustExample {
             name: "Nested Calls".to_string(),
             description: "Function call chain showing stack frames".to_string(),
-            rust_source: r#"// 3-level call chain: demo → a → b → c
+            rust_source: r#"#![no_std]
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+const LED_ADDR: u16 = 0xFF00;  // maps to 0xFF0000 in COR24
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn mmio_write(addr: u16, val: u16) {
+    core::ptr::write_volatile(addr as *mut u16, val);
+}
+
+// 3-level call chain: demo → a → b → c
 // Shows stack frames and calling convention
 // Result: LED = 173
 
@@ -2288,7 +2416,20 @@ level_c:
         RustExample {
             name: "Stack Variables".to_string(),
             description: "Local variables and register spilling".to_string(),
-            rust_source: r#"#[inline(never)]
+            rust_source: r#"#![no_std]
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+const LED_ADDR: u16 = 0xFF00;  // maps to 0xFF0000 in COR24
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn mmio_write(addr: u16, val: u16) {
+    core::ptr::write_volatile(addr as *mut u16, val);
+}
+
+#[inline(never)]
 pub unsafe fn accumulate(seed: u16) -> u16 {
     let a = seed + 1;       // 33
     let b = a + seed;       // 65
@@ -2377,21 +2518,35 @@ accumulate:
         RustExample {
             name: "UART Hello".to_string(),
             description: "Write \"Hello\\n\" to UART output".to_string(),
-            rust_source: r#"const UART_DATA: *mut u8 = 0xFF0100 as _;
-const UART_STAT: *const u8 = 0xFF0101 as _;
+            rust_source: r#"#![no_std]
+
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! { loop {} }
+
+const UART_DATA: u16 = 0xFF01;  // maps to 0xFF0100 in COR24
+const UART_STAT: u16 = 0xFF02;  // maps to 0xFF0101 in COR24
 
 #[inline(never)]
-pub unsafe fn uart_putc(ch: u8) {
-    // Poll TX busy (bit 7) before sending
-    while (*UART_STAT) & 0x80 != 0 {}
-    *UART_DATA = ch;
+#[no_mangle]
+pub unsafe fn mmio_write(addr: u16, val: u16) {
+    core::ptr::write_volatile(addr as *mut u16, val);
+}
+
+#[inline(never)]
+#[no_mangle]
+pub unsafe fn uart_putc(ch: u16) {
+    mmio_write(UART_DATA, ch);
 }
 
 #[no_mangle]
 pub unsafe fn demo_uart_hello() {
-    for &ch in b"Hello\n" {
-        uart_putc(ch);
-    }
+    // Write "Hello\n" character by character
+    uart_putc(b'H' as u16);
+    uart_putc(b'e' as u16);
+    uart_putc(b'l' as u16);
+    uart_putc(b'l' as u16);
+    uart_putc(b'o' as u16);
+    uart_putc(b'\n' as u16);
     loop {}  // halt
 }"#.to_string(),
             msp430_asm: r#"demo_uart_hello:
