@@ -11,12 +11,15 @@ pub fn tooltip() -> Html {
     let visible = use_state(|| false);
     let x = use_state(|| 0.0_f64);
     let y = use_state(|| 0.0_f64);
+    // Bumped after each show to force a second render for width measurement
+    let layout_pass = use_state(|| 0_u32);
 
     {
         let text = text.clone();
         let visible = visible.clone();
         let x = x.clone();
         let y = y.clone();
+        let layout_pass = layout_pass.clone();
 
         use_effect_with((), move |_| {
             let document = web_sys::window().unwrap().document().unwrap();
@@ -25,6 +28,7 @@ pub fn tooltip() -> Html {
             let visible2 = visible.clone();
             let x2 = x.clone();
             let y2 = y.clone();
+            let lp2 = layout_pass.clone();
             let mouseover = Closure::<dyn Fn(web_sys::MouseEvent)>::new(move |e: web_sys::MouseEvent| {
                 if let Some(target) = e.target() {
                     let el: &web_sys::Element = target.unchecked_ref();
@@ -36,12 +40,13 @@ pub fn tooltip() -> Html {
                         let rect = tooltip_el.get_bounding_client_rect();
                         x2.set(rect.left() + rect.width() / 2.0);
                         y2.set(rect.bottom() + 6.0);
+                        // Trigger a second render so width clamping works
+                        lp2.set(*lp2 + 1);
                     }
                 }
             });
 
             let visible3 = visible.clone();
-            #[allow(clippy::collapsible_if)]
             let mouseout = Closure::<dyn Fn(web_sys::MouseEvent)>::new(move |e: web_sys::MouseEvent| {
                 if let Some(target) = e.target() {
                     let el: &web_sys::Element = target.unchecked_ref();
@@ -62,9 +67,12 @@ pub fn tooltip() -> Html {
         });
     }
 
+    // Use layout_pass to suppress unused warning
+    let _ = *layout_pass;
+
     let tip_ref = use_node_ref();
 
-    // Adjust position to keep on screen
+    // Adjust position to keep tooltip on screen
     let mut left = *x;
     let top = *y;
     if let Some(el) = tip_ref.cast::<web_sys::HtmlElement>() {
