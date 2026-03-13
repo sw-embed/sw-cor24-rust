@@ -43,7 +43,7 @@ h1 {
     position: fixed;
     left: 5px;
     top: 50px;
-    width: 150px;
+    width: 100px;
     z-index: 10;
 }
 
@@ -1401,7 +1401,7 @@ header h1 {
 .rust-tab-content {
     flex: 1;
     overflow: hidden;
-    margin-left: 160px; /* Space for fixed sidebar */
+    margin-left: 110px; /* Space for fixed sidebar */
     display: flex;
     flex-direction: column;
 }
@@ -1421,7 +1421,7 @@ header h1 {
 
 .rust-wizard-layout {
     display: grid;
-    grid-template-columns: 160px 160px 1fr;
+    grid-template-columns: 100px 160px 1fr;
     height: 100%;
     overflow: hidden;
 }
@@ -1735,8 +1735,8 @@ header h1 {
 .debug-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    padding: 12px;
+    gap: 8px;
+    padding: 8px;
 }
 
 .debug-content.debug-content-single {
@@ -1784,18 +1784,25 @@ header h1 {
 .register-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 4px;
+    gap: 2px;
+    column-gap: 1px;
     background: #12101f;
-    padding: 8px;
+    padding: 4px;
     border-radius: 3px;
 }
 
 .register-entry {
     display: flex;
     justify-content: space-between;
-    padding: 3px 6px;
+    padding: 2px 4px;
     background: #1e1836;
     border-radius: 2px;
+    border-left: 1px solid #3d2e6b;
+}
+
+/* No left border on first column */
+.register-entry:nth-child(3n+1) {
+    border-left: none;
 }
 
 .register-entry .reg-name {
