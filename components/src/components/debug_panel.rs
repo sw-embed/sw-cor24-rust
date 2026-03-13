@@ -273,6 +273,9 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
                             };
                             let full_tooltip = if i == 5 {
                                 tooltip.to_string()
+                            } else if val & 0x800000 != 0 {
+                                let signed = val as i32 - 0x1000000;
+                                format!("{tooltip} = {val} or {signed}")
                             } else {
                                 format!("{tooltip} = {val}")
                             };
