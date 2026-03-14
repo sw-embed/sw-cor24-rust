@@ -1,7 +1,7 @@
 //! COR24 instruction execution
 
 use super::instruction::{DecodedInstruction, InstructionFormat, Opcode};
-use super::state::{CpuState, DecodeRom};
+use super::state::{CpuState, DecodeRom, TraceEntry};
 
 /// Execute result
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,12 +90,19 @@ impl Executor {
         };
 
         // Calculate next PC
-        let inst_size = match format {
+        let inst_size: u32 = match format {
             InstructionFormat::SingleByte => 1,
             InstructionFormat::TwoBytes => 2,
             InstructionFormat::FourBytes => 4,
         };
         let next_pc = CpuState::mask_24(cpu.pc.wrapping_add(inst_size));
+
+        // Capture pre-execution state for trace
+        let trace_pc = cpu.pc;
+        let trace_regs_before = cpu.registers;
+        let trace_c_before = cpu.c;
+        let trace_sp_before = cpu.get_reg(4);
+        let trace_instruction_num = cpu.instructions;
 
         // Execute instruction
         match inst.opcode {
@@ -416,6 +423,23 @@ impl Executor {
         cpu.cycles += 1;
         cpu.instructions += 1;
         cpu.uart_tick();
+
+        // Record trace entry
+        cpu.trace.push(TraceEntry {
+            pc: trace_pc,
+            opcode: inst.opcode,
+            ra: inst.ra,
+            rb: inst.rb,
+            size: inst_size as u8,
+            imm8,
+            imm24,
+            regs_before: trace_regs_before,
+            regs_after: cpu.registers,
+            c_before: trace_c_before,
+            c_after: cpu.c,
+            sp_before: trace_sp_before,
+            instruction_num: trace_instruction_num,
+        });
 
         ExecuteResult::Ok
     }

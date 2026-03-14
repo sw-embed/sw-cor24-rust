@@ -871,9 +871,11 @@ fn translate_cond_branch(is_jne: bool, ops: &[MspOperand]) -> Result<Vec<String>
 /// Translate CALL instruction.
 ///
 /// MSP430 `call` pushes return address to stack and jumps; all GP registers
-/// are preserved. COR24 `jal` stores return address in a register (clobbering it).
+/// are preserved. COR24 `jal` stores return address in r1 (clobbering it),
+/// but the translated MSP430 code uses r1 freely (mapped from MSP430 r13).
 ///
-/// To match MSP430 semantics, we emulate call with stack-based return:
+/// Until the register mapping is changed to reserve r1 for return addresses
+/// (Phase 2), we keep the stack-based return address mechanism:
 ///   la  r2, .Lret_N     ; compute return address
 ///   push r2              ; push to stack (like MSP430 call)
 ///   la  r2, target       ; load target

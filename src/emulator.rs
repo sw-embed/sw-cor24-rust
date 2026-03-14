@@ -406,6 +406,13 @@ impl EmulatorCore {
         self.cpu.uart_send_rx(byte);
     }
 
+    // ===== Trace =====
+
+    /// Get the instruction trace buffer
+    pub fn trace(&self) -> &crate::cpu::state::TraceBuffer {
+        &self.cpu.trace
+    }
+
     // ===== Disassembly =====
 
     /// Disassemble one instruction at the given address.

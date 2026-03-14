@@ -7,6 +7,9 @@
 //!   0xFF0000 - 0xFFFFFF  I/O space
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
+
+use super::instruction::Opcode;
 
 /// SRAM size: 1 MB on-board
 pub const SRAM_SIZE: usize = 0x100000;
@@ -87,6 +90,217 @@ impl IoState {
     }
 }
 
+/// A single instruction execution record
+#[derive(Clone, Debug)]
+pub struct TraceEntry {
+    /// Program counter at start of instruction
+    pub pc: u32,
+    /// Decoded opcode
+    pub opcode: Opcode,
+    /// Destination register index
+    pub ra: u8,
+    /// Source register index
+    pub rb: u8,
+    /// Instruction size in bytes (1, 2, or 4)
+    pub size: u8,
+    /// 8-bit immediate (for 2-byte and 4-byte instructions)
+    pub imm8: u8,
+    /// 24-bit immediate (for 4-byte instructions)
+    pub imm24: u32,
+    /// Register state before execution
+    pub regs_before: [u32; 8],
+    /// Register state after execution
+    pub regs_after: [u32; 8],
+    /// Condition flag before
+    pub c_before: bool,
+    /// Condition flag after
+    pub c_after: bool,
+    /// SP before (convenience, same as regs_before[4])
+    pub sp_before: u32,
+    /// Instruction count at this point
+    pub instruction_num: u64,
+}
+
+/// Register names for display
+const REG_NAMES: [&str; 8] = ["r0", "r1", "r2", "fp", "sp", "z/c", "iv", "ir"];
+
+impl fmt::Display for TraceEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Disassemble the instruction
+        let disasm = self.disassemble();
+
+        write!(f, "{:5} 0x{:06X}  {:<24}", self.instruction_num, self.pc, disasm)?;
+
+        // Show register changes
+        let mut changes = Vec::new();
+        for i in 0..8 {
+            if self.regs_before[i] != self.regs_after[i] {
+                changes.push(format!("{}:0x{:06X}→0x{:06X}",
+                    REG_NAMES[i], self.regs_before[i], self.regs_after[i]));
+            }
+        }
+        if self.c_before != self.c_after {
+            changes.push(format!("c:{}→{}", self.c_before as u8, self.c_after as u8));
+        }
+        if !changes.is_empty() {
+            write!(f, "  [{}]", changes.join(" "))?;
+        }
+
+        Ok(())
+    }
+}
+
+impl TraceEntry {
+    /// Disassemble this instruction into a human-readable string
+    pub fn disassemble(&self) -> String {
+        let ra = REG_NAMES[self.ra as usize];
+        let rb = REG_NAMES[self.rb as usize];
+        match self.opcode {
+            Opcode::AddReg => format!("add     {},{}", ra, rb),
+            Opcode::AddImm => format!("add     {},{}", ra, self.imm8 as i8),
+            Opcode::And => format!("and     {},{}", ra, rb),
+            Opcode::Bra => {
+                let offset = self.imm8 as i8;
+                let target = (self.pc as i64 + 4 + offset as i64) as u32 & 0xFFFFFF;
+                format!("bra     0x{:06X}", target)
+            }
+            Opcode::Brf => {
+                let offset = self.imm8 as i8;
+                let target = (self.pc as i64 + 4 + offset as i64) as u32 & 0xFFFFFF;
+                format!("brf     0x{:06X}", target)
+            }
+            Opcode::Brt => {
+                let offset = self.imm8 as i8;
+                let target = (self.pc as i64 + 4 + offset as i64) as u32 & 0xFFFFFF;
+                format!("brt     0x{:06X}", target)
+            }
+            Opcode::Ceq => format!("ceq     {},{}", ra, rb),
+            Opcode::Cls => format!("cls     {},{}", ra, rb),
+            Opcode::Clu => format!("clu     {},{}", ra, rb),
+            Opcode::Jal => format!("jal     {},({})", ra, rb),
+            Opcode::Jmp => format!("jmp     ({})", ra),
+            Opcode::La => format!("la      {},0x{:06X}", ra, self.imm24),
+            Opcode::Lb => format!("lb      {},{}({})", ra, self.imm8 as i8, rb),
+            Opcode::Lbu => format!("lbu     {},{}({})", ra, self.imm8, rb),
+            Opcode::Lc => format!("lc      {},{}", ra, self.imm8 as i8),
+            Opcode::Lcu => format!("lcu     {},{}", ra, self.imm8),
+            Opcode::Lw => format!("lw      {},{}({})", ra, self.imm8 as i8, rb),
+            Opcode::Mov => format!("mov     {},{}", ra, rb),
+            Opcode::Mul => format!("mul     {},{}", ra, rb),
+            Opcode::Or => format!("or      {},{}", ra, rb),
+            Opcode::Pop => format!("pop     {}", ra),
+            Opcode::Push => format!("push    {}", ra),
+            Opcode::Sb => format!("sb      {},{}({})", ra, self.imm8 as i8, rb),
+            Opcode::Shl => format!("shl     {},{}", ra, rb),
+            Opcode::Sra => format!("sra     {},{}", ra, rb),
+            Opcode::Srl => format!("srl     {},{}", ra, rb),
+            Opcode::Sub => format!("sub     {},{}", ra, rb),
+            Opcode::SubSp => format!("sub     sp,{}", self.imm24),
+            Opcode::Sw => format!("sw      {},{}({})", ra, self.imm8 as i8, rb),
+            Opcode::Sxt => format!("sxt     {},{}", ra, rb),
+            Opcode::Xor => format!("xor     {},{}", ra, rb),
+            Opcode::Zxt => format!("zxt     {},{}", ra, rb),
+            Opcode::Invalid => format!("??? (0x{:02X})", self.imm8),
+        }
+    }
+}
+
+/// Ring buffer of recent instruction trace entries
+#[derive(Clone)]
+pub struct TraceBuffer {
+    entries: Vec<TraceEntry>,
+    head: usize,
+    capacity: usize,
+    count: usize,
+}
+
+impl Default for TraceBuffer {
+    fn default() -> Self {
+        Self::new(200)
+    }
+}
+
+impl TraceBuffer {
+    /// Create a new trace buffer with given capacity
+    pub fn new(capacity: usize) -> Self {
+        Self {
+            entries: Vec::with_capacity(capacity),
+            head: 0,
+            capacity,
+            count: 0,
+        }
+    }
+
+    /// Record a trace entry
+    pub fn push(&mut self, entry: TraceEntry) {
+        if self.entries.len() < self.capacity {
+            self.entries.push(entry);
+        } else {
+            self.entries[self.head] = entry;
+        }
+        self.head = (self.head + 1) % self.capacity;
+        self.count += 1;
+    }
+
+    /// Get the last N entries in chronological order
+    pub fn last_n(&self, n: usize) -> Vec<&TraceEntry> {
+        let len = self.entries.len();
+        let n = n.min(len);
+        let mut result = Vec::with_capacity(n);
+        for i in 0..n {
+            let idx = if len < self.capacity {
+                // Not yet wrapped
+                len - n + i
+            } else {
+                (self.head + self.capacity - n + i) % self.capacity
+            };
+            result.push(&self.entries[idx]);
+        }
+        result
+    }
+
+    /// Get all entries in chronological order
+    pub fn all(&self) -> Vec<&TraceEntry> {
+        self.last_n(self.entries.len())
+    }
+
+    /// Total number of entries ever recorded
+    pub fn total_count(&self) -> usize {
+        self.count
+    }
+
+    /// Number of entries currently in buffer
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    /// Check if buffer is empty
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Clear all entries
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        self.head = 0;
+        self.count = 0;
+    }
+
+    /// Format the last N entries as a multi-line string
+    pub fn format_last(&self, n: usize) -> String {
+        let entries = self.last_n(n);
+        let mut out = String::new();
+        out.push_str(&format!("--- Trace (last {} of {} total) ---\n",
+            entries.len(), self.count));
+        out.push_str(&format!("{:>5} {:>8}  {:<24}  {}\n",
+            "#", "PC", "Instruction", "Changes"));
+        for entry in &entries {
+            out.push_str(&format!("{}\n", entry));
+        }
+        out
+    }
+}
+
 /// COR24 CPU state
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CpuState {
@@ -110,6 +324,9 @@ pub struct CpuState {
     pub instructions: u64,
     /// I/O peripheral state
     pub io: IoState,
+    /// Instruction execution trace (ring buffer, not serialized)
+    #[serde(skip)]
+    pub trace: TraceBuffer,
 }
 
 impl Default for CpuState {
@@ -132,6 +349,7 @@ impl CpuState {
             cycles: 0,
             instructions: 0,
             io: IoState::new(),
+            trace: TraceBuffer::default(),
         };
         // Initialize stack pointer
         state.registers[4] = INITIAL_SP;
@@ -149,6 +367,7 @@ impl CpuState {
         self.cycles = 0;
         self.instructions = 0;
         self.io = IoState::new();
+        self.trace.clear();
     }
 
     /// Hard reset (clears memory too)

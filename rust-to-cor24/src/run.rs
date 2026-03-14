@@ -173,6 +173,8 @@ struct CliArgs {
     dump: bool,
     entry: Option<String>,           // entry point label
     uart_input: Vec<u8>,             // characters to send to UART RX
+    trace: usize,                    // number of trace entries to dump (0 = off)
+    step: bool,                      // step mode: print each instruction
 }
 
 fn parse_args() -> CliArgs {
@@ -186,6 +188,8 @@ fn parse_args() -> CliArgs {
         dump: false,
         entry: None,
         uart_input: Vec::new(),
+        trace: 0,
+        step: false,
     };
 
     let mut i = 1;
@@ -257,6 +261,17 @@ fn parse_args() -> CliArgs {
                     cli.entry = Some(args[i + 1].clone());
                     i += 1;
                 }
+            }
+            "--trace" => {
+                if i + 1 < args.len() {
+                    cli.trace = args[i + 1].parse().unwrap_or(50);
+                    i += 1;
+                } else {
+                    cli.trace = 50;
+                }
+            }
+            "--step" => {
+                cli.step = true;
             }
             _ => {
                 if cli.command.is_empty() && !args[i].starts_with('-') {
@@ -417,6 +432,64 @@ fn print_dump(emu: &EmulatorCore) {
     print_io_state(emu);
 }
 
+/// Run in step mode: execute one instruction at a time, printing each.
+/// Stops on halt, max_instructions limit, or loop detection.
+fn run_step_mode(emu: &mut EmulatorCore, max_instructions: i64, uart_input: &[u8]) {
+    let mut uart_pos = 0usize;
+    let mut prev_uart_len = 0usize;
+    let max = if max_instructions < 0 { 10_000 } else { max_instructions as u64 };
+
+    println!("{:>5} {:>8}  {:<24}  {}", "#", "PC", "Instruction", "Changes");
+    println!("{}", "-".repeat(80));
+
+    for n in 0..max {
+        // Feed UART input if available
+        if uart_pos < uart_input.len() && n > 0 && n % 100 == 0 {
+            let ch = uart_input[uart_pos];
+            emu.send_uart_byte(ch);
+            println!("  --- UART RX: 0x{:02X} ('{}') ---",
+                ch, if (0x20..=0x7E).contains(&ch) { ch as char } else { '.' });
+            uart_pos += 1;
+        }
+
+        let result = emu.step();
+
+        // Print the trace entry for this instruction
+        let trace = emu.trace();
+        if let Some(entry) = trace.last_n(1).first() {
+            println!("{}", entry);
+        }
+
+        // Print any new UART output
+        let output = emu.get_uart_output();
+        if output.len() > prev_uart_len {
+            let new = &output[prev_uart_len..];
+            for ch in new.chars() {
+                if ch == '\n' {
+                    println!("  >>> UART TX: '\\n'");
+                } else {
+                    println!("  >>> UART TX: '{}'  (0x{:02X})", ch, ch as u8);
+                }
+            }
+            prev_uart_len = output.len();
+        }
+
+        if result.instructions_run == 0 {
+            println!("\n--- Halted after {} instructions ---", n);
+            break;
+        }
+    }
+
+    let uart = emu.get_uart_output();
+    if !uart.is_empty() {
+        println!("\nUART output: {}", uart);
+    }
+    println!("\nExecuted {} instructions", emu.instructions_count());
+    if emu.is_halted() {
+        println!("CPU halted (self-branch detected)");
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -433,6 +506,8 @@ fn main() {
         println!("  --max-instructions, -n <count>  Stop after N instructions (-1 = no limit, default)");
         println!("  --uart-input, -u <str>  Send characters to UART RX (supports \\n, \\x21)");
         println!("  --dump               Dump CPU state, I/O, and non-zero memory after halt");
+        println!("  --trace <N>          Dump last N instructions on halt/timeout (default: 50)");
+        println!("  --step               Print each instruction as it executes");
         println!("  --entry, -e <label>  Set entry point to label address");
         println!();
         println!("Example:");
@@ -525,17 +600,25 @@ fn main() {
                      if cli.speed == 0 { "max".to_string() } else { cli.speed.to_string() },
                      cli.time_limit);
 
-            let instructions = run_with_timing(&mut emu, cli.speed, cli.time_limit, cli.max_instructions, &cli.uart_input);
+            if cli.step {
+                // Step mode: execute one instruction at a time, printing each
+                run_step_mode(&mut emu, cli.max_instructions, &cli.uart_input);
+            } else {
+                let instructions = run_with_timing(&mut emu, cli.speed, cli.time_limit, cli.max_instructions, &cli.uart_input);
 
-            // Print UART output if any
-            let uart = emu.get_uart_output();
-            if !uart.is_empty() {
-                println!("\nUART output: {}", uart);
+                // Print UART output if any
+                let uart = emu.get_uart_output();
+                if !uart.is_empty() {
+                    println!("\nUART output: {}", uart);
+                }
+
+                println!("\nExecuted {} instructions", instructions);
+                if emu.is_halted() {
+                    println!("CPU halted (self-branch detected)");
+                }
             }
-
-            println!("\nExecuted {} instructions", instructions);
-            if emu.is_halted() {
-                println!("CPU halted (self-branch detected)");
+            if cli.trace > 0 {
+                print!("{}", emu.trace().format_last(cli.trace));
             }
             if cli.dump { print_dump(&emu); }
         }
