@@ -1,3 +1,4 @@
+mod c_pipeline;
 mod collapsible;
 mod debug_panel;
 mod example_picker;
@@ -11,6 +12,7 @@ mod sidebar;
 mod tab_bar;
 mod tooltip;
 
+pub use c_pipeline::*;
 pub use collapsible::*;
 pub use debug_panel::*;
 pub use example_picker::*;

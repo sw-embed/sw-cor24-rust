@@ -205,7 +205,7 @@ _putchr:
     push    r2
     push    r1
     mov     fp, sp
-    la      r2, 0xFF0100
+    la      r2, -65280
 .pc_wait:
     lbu     r0, 1(r2)
     lcu     r1, 128
