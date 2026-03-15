@@ -21,34 +21,39 @@ pub struct CExample {
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum CWizardStep {
     Source,    // C source code
-    Assemble, // COR24 assembly + debugger
+    Compile,  // COR24 assembly output
+    Assemble, // Assembled + debugger
 }
 
 impl CWizardStep {
     fn label(&self) -> &'static str {
         match self {
             CWizardStep::Source => "Source",
+            CWizardStep::Compile => "Compile",
             CWizardStep::Assemble => "Assemble",
         }
     }
 
     fn next(&self) -> Option<CWizardStep> {
         match self {
-            CWizardStep::Source => Some(CWizardStep::Assemble),
+            CWizardStep::Source => Some(CWizardStep::Compile),
+            CWizardStep::Compile => Some(CWizardStep::Assemble),
             CWizardStep::Assemble => None,
         }
     }
 
     fn action_label(&self) -> &'static str {
         match self {
-            CWizardStep::Source => "Assemble",
+            CWizardStep::Source => "Compile",
+            CWizardStep::Compile => "Assemble",
             CWizardStep::Assemble => "",
         }
     }
 
     fn action_tooltip(&self) -> &'static str {
         match self {
-            CWizardStep::Source => "View COR24 assembly and run in emulator",
+            CWizardStep::Source => "Compile C to COR24 assembly",
+            CWizardStep::Compile => "Assemble COR24 code into machine code",
             CWizardStep::Assemble => "",
         }
     }
@@ -56,13 +61,15 @@ impl CWizardStep {
     fn step_tooltip(&self) -> &'static str {
         match self {
             CWizardStep::Source => "C source code (from Luther Johnson's cc24 compiler)",
-            CWizardStep::Assemble => "COR24 assembly and execution",
+            CWizardStep::Compile => "COR24 assembly (compiler output + runtime stubs)",
+            CWizardStep::Assemble => "Machine code execution and debug",
         }
     }
 
     fn cell_id(&self) -> &'static str {
         match self {
             CWizardStep::Source => "c-cell-source",
+            CWizardStep::Compile => "c-cell-asm",
             CWizardStep::Assemble => "c-cell-debug",
         }
     }
@@ -165,7 +172,7 @@ pub fn c_pipeline(props: &CPipelineProps) -> Html {
         }
     };
 
-    let all_steps = [CWizardStep::Source, CWizardStep::Assemble];
+    let all_steps = [CWizardStep::Source, CWizardStep::Compile, CWizardStep::Assemble];
 
     html! {
         <div class="rust-wizard-layout">
@@ -247,8 +254,8 @@ pub fn c_pipeline(props: &CPipelineProps) -> Html {
                         </div>
                     </div>
 
-                    // Cell 2: COR24 Assembly + Debug (visible after Assemble step)
-                    if *current_step >= CWizardStep::Assemble {
+                    // Cell 2: COR24 Assembly (visible after Compile step)
+                    if *current_step >= CWizardStep::Compile {
                         <div class="notebook-cell" id="c-cell-asm">
                             <div class="cell-header">
                                 <span>{"COR24 Assembly"}</span>
@@ -258,7 +265,10 @@ pub fn c_pipeline(props: &CPipelineProps) -> Html {
                                 <pre class="code-block asm-code">{&example.cor24_assembly}</pre>
                             </div>
                         </div>
+                    }
 
+                    // Cell 3: Debug Panel (visible after Assemble step)
+                    if *current_step >= CWizardStep::Assemble {
                         <div class="notebook-cell notebook-cell-debug" id="c-cell-debug">
                             <div class="cell-header">
                                 <span>{"Execution"}</span>
