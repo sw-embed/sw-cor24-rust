@@ -819,6 +819,22 @@ impl Assembler {
 
         match (ra, imm) {
             (Some(ra), Some(imm)) => {
+                // lc sign-extends an 8-bit immediate: valid range is 0..=127
+                // (values 128..=255 get sign-extended to large negative numbers)
+                if !unsigned && imm > 127 && imm < 0xFFFFFF80 {
+                    self.errors.push(format!(
+                        "Line {}: lc immediate {} out of range (0..127 or use lcu for unsigned)",
+                        line_num + 1, imm
+                    ));
+                    return vec![];
+                }
+                if unsigned && imm > 255 {
+                    self.errors.push(format!(
+                        "Line {}: lcu immediate {} out of range (0..255)",
+                        line_num + 1, imm
+                    ));
+                    return vec![];
+                }
                 if let Some(first_byte) = encode::encode_lc(ra, unsigned) {
                     vec![first_byte, imm as u8]
                 } else {

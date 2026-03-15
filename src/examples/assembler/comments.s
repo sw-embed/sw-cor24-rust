@@ -15,11 +15,11 @@
 ;
 ; Semicolons start a comment (to end of line):
 
-    lc r0, 100      ; load the constant 100 into r0
+    lc r0, 40       ; load the constant 40 into r0
 
 ; Hash marks also start a comment:
 
-    lc r1, 200      # load the constant 200 into r1
+    lc r1, 60       # load the constant 60 into r1
 
 ; A full line starting with ; or # is a comment:
 # This entire line is a comment too.
@@ -28,7 +28,7 @@
 ; Try it: edit, assemble, step!
 ; ------------------------------------------------------------
 
-    add r0, r1      ; r0 = 100 + 200 = 300
+    add r0, r1      ; r0 = 40 + 60 = 100
 
 ; COR24 has no halt instruction — stop by branching to self:
 done:   bra     done
