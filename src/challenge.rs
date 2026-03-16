@@ -113,7 +113,7 @@ pub fn get_examples() -> Vec<(String, String, String)> {
         ),
         (
             "Multiply".into(),
-            "6 × 7 = 42 via loop, print to UART".into(),
+            "6 × 7 = 42 two ways: native mul and loop".into(),
             include_str!("examples/assembler/multiply.s").into(),
         ),
         (
