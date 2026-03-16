@@ -36,3 +36,95 @@
 - Regenerate pipeline demos with jal calling convention
 - Add instruction trace ring buffer and CLI --trace/--step modes
 - Document Luther Johnson's COR24 calling convention feedback
+
+## 2026-03-13
+
+- Add @cor24 asm passthrough in translator for ISR code
+- Echo example: letters→uppercase, !→halt with interrupt-driven UART
+- Fix MMIO byte width bug (must use byte ops, not word ops)
+- Fix cmp+equality branch translation in translator
+- Add --max-instructions and --uart-input options to cor24-run
+- Add per-demo run scripts and master demo runner
+- Add demo_drop: Rust Drop trait (RAII) on stack
+- Fix translator sp base register bug
+- Compact UI: tighter registers, consistent sidebars, larger Rust fonts
+- Register tooltips show decimal values (signed+unsigned when bit 23 set)
+- Fix tooltips clipped at right edge of screen
+- Add MakerLisp sidebar link to both tabs
+- Add panic demo, fix spill register clobbering, tail call optimization
+
+## 2026-03-12
+
+- Show complete, self-contained Rust source in Web UI pipeline examples
+- Add entry point prologue to MSP430→COR24 translator
+- Add pipeline tests and fail-fast on bad entry point
+
+## 2026-03-11
+
+- Stop running CPU when loading example or challenge
+
+## 2026-03-10
+
+- Sparse memory display with zero-row collapsing
+- Add OOM and stack overflow example programs
+- Implement UART RX interrupt support matching COR24 hardware
+- Add UART input panel and interrupt-driven echo example
+- Fix UART input race condition with shared queue during animated run
+- Add UART clear button and echo prompt character
+
+## 2026-03-09
+
+- Rust→MSP430→COR24 pipeline: translator, demos, emulator dump
+- Shared DebugPanel with unified register/memory display and I/O regions
+- Shared ExamplePicker component for both Assembler and Rust tabs
+- Auto-load Blink LED example on Rust tab startup
+- LED duty cycle tracking for accurate blink visualization
+- CSS tooltips via data-tooltip attribute
+- UART TX display, Multiply and Fibonacci examples with UART output
+- Integration tests for Fibonacci and other examples
+
+## 2026-03-07
+
+- Fix core CPU: memory model, UART addresses, SP init, I/O registers
+- Fix branch displacement calculation
+- Add LGO loader and CLI debugger (cor24-dbg)
+- Add EmulatorCore abstraction layer
+- Web UI: multi-region memory display and EmulatorCore integration
+- Remove halt pseudo-instruction; use label+branch pattern
+- Detect self-branch as halt condition
+- UI overhaul: larger fonts, compact I/O, improved contrast
+- Add Hello World UART example and demo scripts
+
+## 2026-03-03
+
+- Add feedback documents, test source, analysis comparisons
+- FPGA soft CPU notes
+
+## 2026-03-02
+
+- Add animated run with stop button for infinite loops
+- Use Rc<Cell> for stop flag and switch state (race condition fixes)
+- Add Stop button and button/LED support for Rust pipeline
+
+## 2026-03-01
+
+- Add COR24-specific examples and challenges
+- Add working wasm2cor24 translator prototype
+- Add memory-mapped I/O with LED and switch visualization
+- Add CLI LED demo runner (cor24-run)
+- Complete Rust→WASM→COR24 compilation pipeline
+- Add Assembler/Rust tabs with pipeline visualization
+- Add step-through debugging with assembly listing highlighting
+- Wizard-driven 3-column layout for Rust pipeline
+- Heat map highlighting for register/memory changes
+- Switch to pre-built pages deployment
+
+## 2026-02-28
+
+- Extract decode ROM from Verilog and update assembler encodings
+- Add executor tests, fix assembler comments
+- Setup GitHub Pages deployment
+
+## 2026-02-25
+
+- Initial COR24 assembly emulator implementation
