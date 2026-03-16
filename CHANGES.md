@@ -13,6 +13,9 @@
 - Update Multiply example: native mul + loop, with assertions
 - Add assembler range check for lc (0..127) and lcu (0..255)
 - Document assembler compatibility analysis (docs/extended-assembler.md)
+- Add Changes link in web UI footer (links to GitHub CHANGES.md)
+- Update README screenshots: assembler, C, and Rust tabs
+- Backfill CHANGES.md with full project history (Feb 25 - Mar 16)
 
 ## 2026-03-15
 

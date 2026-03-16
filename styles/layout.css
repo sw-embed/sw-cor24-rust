@@ -26,6 +26,15 @@
     color: #666;
 }
 
+.footer-link {
+    color: #7c3aed;
+    text-decoration: none;
+}
+
+.footer-link:hover {
+    text-decoration: underline;
+}
+
 .footer-sep {
     color: #444;
 }
