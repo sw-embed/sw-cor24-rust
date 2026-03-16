@@ -96,8 +96,12 @@ immediates.
 
 ### Pipeline Examples (`src/examples/rust_pipeline/*.cor24.s`)
 
-Compiler output — not intended to be reference-assembler-compatible.
-Use hex immediates in `la` operands but are otherwise standard.
+Translator output (Rust→MSP430→COR24). Must also be reference-compatible.
+Currently use hex immediates in `la` operands (e.g., `la r0, 0xFF0000`)
+which need converting to decimal (`la r0, -65536`). The translator in
+`rust-to-cor24/src/msp430.rs` needs to emit decimal instead of hex for
+`la` operands. No other incompatibilities — labels are on their own lines
+and no `#` comments or inline labels are generated.
 
 ## Proposed Solution
 
@@ -106,13 +110,19 @@ Use hex immediates in `la` operands but are otherwise standard.
 Examples must assemble with `as24` as shipped. Since `la` IS supported (just
 not with hex operands), the fixes are all trivial text changes.
 
-### Phase 1: Convert Hand-Written Examples (all trivial)
+### Phase 1: Convert All .s Output to as24-Compatible
 
-All 12 files need only these mechanical changes:
+**Hand-written examples (12 files)** — mechanical text changes:
 
 1. **Split inline labels** — `halt: bra halt` → label on its own line
 2. **Replace `#` comments with `;`** — only `comments.s`
 3. **Convert hex immediates to decimal** — in `la` operands and `lc`/`lcu`
+
+**Translator output** (`rust-to-cor24/src/msp430.rs`):
+
+4. **Emit decimal in `la` operands** — change `format!("0x{:06X}", addr)` to
+   emit signed decimal (e.g., `-65536` for `0xFF0000`). Then regenerate all
+   pipeline demos and web UI examples.
 
 Hex-to-decimal conversions needed:
 - `0xFF0000` → `-65536` (LED I/O register)
