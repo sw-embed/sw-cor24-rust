@@ -1,6 +1,11 @@
-//! Demo: Stack Variables
-//! Accumulates values across many variables, forcing register spills to stack.
-//! At halt, spill slots contain intermediate values visible in memory dump.
+//! Demo: Stack Variables (Register Spilling)
+//! Accumulates values across 5+ variables, forcing register spills to stack.
+//! MSP430 uses 16 registers; COR24 has only 3 GP registers (r0-r2).
+//! The translator maps r12→r0 and spills r13-r15, r4-r11 to fp-relative
+//! stack slots, generating sw/lw pairs for each access. This is correct
+//! but slower than hand-written code — the cost of automatic translation.
+//! Compare with the fibonacci_iter demo which uses @cor24 passthrough
+//! to avoid spills entirely.
 //! Pipeline: this file → rustc (msp430) → .msp430.s → msp430-to-cor24 → .cor24.s → assembler → emulator
 
 #![no_std]
