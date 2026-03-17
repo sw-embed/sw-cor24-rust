@@ -31,11 +31,9 @@ putc:
         push    r0              ; save char
         la      r1,-65280       ; UART base
 .wait:
-        lb      r2,1(r1)        ; read status byte
-        lcu     r0,128
-        and     r2,r0           ; isolate bit 7
-        ceq     r2,z
-        brf     .wait           ; spin while TX busy
+        lb      r2,1(r1)        ; read status (sign-extended)
+        cls     r2,z
+        brt     .wait           ; spin while TX busy (bit 7 = negative)
         pop     r0              ; restore char
         sb      r0,0(r1)        ; transmit byte
         pop     r1              ; restore return address

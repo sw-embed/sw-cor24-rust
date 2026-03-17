@@ -30,6 +30,8 @@
 - Executor treats 0xFF as true no-op (advance PC, no register changes)
 - Add Intel hex literal support (NNh suffix) to match reference as24
 - Add Literals example showing decimal, negative, and Intel hex formats
+- Simplify UART TX busy poll: cls r2,z / brt (3 instructions → 1)
+  per Luther Johnson's feedback — lb sign-extends bit 7, so negative = busy
 
 ## 2026-03-15
 

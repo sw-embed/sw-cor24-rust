@@ -90,11 +90,9 @@ putc:
         push    r0
         la      r1,-65280
 .wait:
-        lb      r2,1(r1)
-        lcu     r0,128
-        and     r2,r0
-        ceq     r2,z
-        brf     .wait
+        lb      r2,1(r1)        ; read status (sign-extended)
+        cls     r2,z
+        brt     .wait           ; spin while TX busy (bit 7 = negative)
         pop     r0
         sb      r0,0(r1)
         pop     r1
