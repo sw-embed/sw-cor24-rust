@@ -1773,18 +1773,18 @@ header h1 {
 .cell-header {
     padding: 10px 12px;
     background: #2d1f4e;
-    color: #c792ea;
+    color: #ffd700;
     font-weight: bold;
-    font-size: 0.85em;
+    font-size: 1.05em;
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
 .cell-header-example {
-    font-weight: normal;
-    font-size: 0.9em;
-    color: #8b7aaa;
+    font-weight: bold;
+    font-size: 0.95em;
+    color: #ffd700;
     font-style: italic;
 }
 
@@ -1844,6 +1844,18 @@ header h1 {
     font-weight: bold;
     color: #a78bfa;
     margin-right: 2px;
+}
+
+.speed-label {
+    font-size: 0.8em;
+    color: #a78bfa;
+    margin-left: 8px;
+}
+
+.speed-slider {
+    width: 80px;
+    cursor: pointer;
+    accent-color: #7c3aed;
 }
 
 .debug-content {

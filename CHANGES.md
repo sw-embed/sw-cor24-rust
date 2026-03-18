@@ -40,6 +40,15 @@
   replaces 500-batch loop that froze the browser on slower machines
 - Extract shared run_one_instruction(), eliminating ~300 lines of
   duplicated run loop code across the three tabs
+- Extract shared callback factories (make_step/run/switch/uart_send/
+  uart_clear_callback), eliminating another ~225 lines of duplication
+- Cell headers (Source, Assembly, Execution) styled yellow for contrast
+- Document register spill behavior in Stack Variables demo
+
+## 2026-03-18
+
+- Rebuild pages with per-instruction run loop, speed slider, refactored
+  callbacks, yellow cell headers, and all Mar 17 changes
 
 ## 2026-03-15
 
