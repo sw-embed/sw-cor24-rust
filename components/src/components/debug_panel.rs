@@ -187,9 +187,11 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
     let _ = *speed_display; // trigger re-render dependency
     let ms = props.run_speed_ms.as_ref().map_or(10u32, |rc| rc.get()).clamp(1, 100);
     let ips = 1000 / ms;
-    let speed_tip = format!("{}ms per instruction ({}/sec)", ms, ips);
+    let speed_tip = format!("{}ms/instr ({}/sec)", ms, ips);
     let speed_val = format!("{}/s", ips);
-    let speed_slider_pos = format!("{}", 101 - ms);
+    // Log scale: slider 0=10/s(100ms), 50=100/s(10ms), 100=1000/s(1ms)
+    // ips = 10^(1 + slider/50), so slider = 50*(log10(ips) - 1)
+    let speed_slider_pos = format!("{}", (((ips as f64).log10() - 1.0) * 50.0).round().max(0.0) as u32);
 
     let on_reset_click = {
         let on_reset = props.on_reset.clone();
@@ -248,7 +250,10 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
                             Callback::from(move |e: InputEvent| {
                                 if let Some(input) = e.target_dyn_into::<web_sys::HtmlInputElement>()
                                     && let Ok(v) = input.value().parse::<u32>() {
-                                        let new_ms = (101u32.saturating_sub(v.min(100))).clamp(1, 100);
+                                        // Log scale: slider 0-100 maps to 10-1000 ips
+                                        // ips = 10^(1 + v/50), ms = 1000/ips
+                                        let ips = 10f64.powf(1.0 + v as f64 / 50.0);
+                                        let new_ms = (1000.0 / ips).round().max(1.0).min(100.0) as u32;
                                         speed_rc.set(new_ms);
                                         speed_display.set(new_ms);
                                 }
