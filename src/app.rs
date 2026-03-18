@@ -79,7 +79,8 @@ pub fn app() -> Html {
     // Shared flag for UART clear during animated run
     let asm_uart_clear_flag = use_mut_ref(|| Rc::new(Cell::new(false)));
     // Shared run speed: delay in ms between instructions (all tabs share this)
-    let run_speed_ms = use_mut_ref(|| Rc::new(Cell::new(20u32)));
+    // Default 10ms/instruction (~100 instr/sec)
+    let run_speed_ms = use_mut_ref(|| Rc::new(Cell::new(10u32)));
 
     // Modal states
     let tutorial_open = use_state(|| false);
@@ -1579,11 +1580,18 @@ fn run_one_instruction(
     }
 
     // Execute instructions based on speed setting.
-    // Slow (delay >= 10ms): 1 instruction per yield — fully visible stepping.
-    // Fast (delay < 10ms): batch (delay+1)^2 instructions per yield — usable
-    // for programs with delay loops. State updates after each batch.
-    let delay = speed_handle.get();
-    let batch = if delay >= 10 { 1 } else { (delay + 1) * (delay + 1) };
+    // Slow (delay >= 50ms): 1 instruction per yield — fully visible stepping.
+    // Medium (10-49ms): small batches for responsiveness.
+    // Fast (< 10ms): larger batches for programs with loops.
+    let delay = speed_handle.get().clamp(1, 100);
+    let batch = if delay >= 50 {
+        1u32
+    } else if delay >= 10 {
+        ((51 - delay) / 5).max(1)
+    } else {
+        let d = 11 - delay;  // delay is 1..9, d is 2..10
+        (d * d).max(1)
+    };
 
     let mut halted = false;
     for _ in 0..batch {

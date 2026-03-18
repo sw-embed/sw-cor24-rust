@@ -71,6 +71,8 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
     // Step count selector state
     let step_count = use_state(|| 1u32);
     let trace_expanded = use_state(|| false);
+    // Mirror of Rc<Cell> speed for display re-rendering
+    let speed_display = use_state(|| props.run_speed_ms.as_ref().map_or(10, |rc| rc.get()));
 
     // Track PC for auto-scroll
     let last_pc = use_state(|| 0u32);
@@ -181,6 +183,30 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
         Callback::from(move |_| on_stop.emit(()))
     };
 
+    // Compute speed slider display values from the display mirror state
+    let ms = (*speed_display).clamp(1, 100);
+    let (batch, ips) = if ms >= 50 {
+        (1u32, 1000 / ms)
+    } else if ms >= 10 {
+        let b = ((51 - ms) / 5).max(1);
+        (b, b * (1000 / ms))
+    } else {
+        let d = 11 - ms;  // ms is 1..9 here, so d is 2..10
+        let b = (d * d).max(1);
+        (b, b * (1000 / ms))
+    };
+    let speed_tip = if batch <= 1 {
+        format!("{} instr/sec ({}ms delay)", ips, ms)
+    } else {
+        format!("~{} instr/sec (batch {}, {}ms)", ips, batch, ms)
+    };
+    let speed_val = if batch <= 1 {
+        format!("{}/s", ips)
+    } else {
+        format!("~{}/s", ips)
+    };
+    let speed_slider_pos = format!("{}", 101u32.saturating_sub(ms.min(100)));
+
     let on_reset_click = {
         let on_reset = props.on_reset.clone();
         Callback::from(move |_| on_reset.emit(()))
@@ -228,20 +254,24 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
                     {"Reset"}
                 </button>
                 if let Some(speed_rc) = &props.run_speed_ms {
-                    <span class="speed-label">{"Speed:"}</span>
+                    <span class="speed-label">{"Run Speed:"}</span>
                     <input type="range" class="speed-slider"
-                        min="1" max="200" value={format!("{}", 201 - speed_rc.get())}
-                        data-tooltip={format!("{}ms/instruction", speed_rc.get())}
+                        min="1" max="100" value={speed_slider_pos.clone()}
+                        data-tooltip={speed_tip.clone()}
                         oninput={{
                             let speed_rc = speed_rc.clone();
+                            let speed_display = speed_display.clone();
                             Callback::from(move |e: InputEvent| {
                                 if let Some(input) = e.target_dyn_into::<web_sys::HtmlInputElement>()
                                     && let Ok(v) = input.value().parse::<u32>() {
-                                        speed_rc.set(201 - v);
+                                        let new_ms = (101u32.saturating_sub(v.min(100))).clamp(1, 100);
+                                        speed_rc.set(new_ms);
+                                        speed_display.set(new_ms);
                                 }
                             })
                         }}
                     />
+                    <span class="speed-value">{speed_val.clone()}</span>
                 }
             </div>
 
