@@ -23,7 +23,7 @@ CPU halted (self-branch detected)
   sp:  0xFEEBFA
 
 === Emulator ===
-  Instructions: 93
+  Instructions: 94
   Halted: true
 
 === SRAM 000000-0FFFFF (1 MB) ===

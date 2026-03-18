@@ -25,7 +25,7 @@ pub unsafe fn demo_countdown() {
     let mut count: u16 = 10;
     while count != 0 {
         mem_write(RESULT_ADDR, count as u8);
-        delay(1000);
+        delay(10);
         count -= 1;
     }
     mem_write(RESULT_ADDR, 0);

@@ -14,7 +14,7 @@ CPU halted (self-branch detected)
   sp:  0xFEEC00
 
 === Emulator ===
-  Instructions: 3
+  Instructions: 4
   Halted: true
 
 === SRAM 000000-0FFFFF (1 MB) ===

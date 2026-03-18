@@ -51,12 +51,12 @@ demo_blinky:
 	mov	#-256, r12
 	mov	#1, r13
 	call	#mmio_write
-	mov	#5000, r12
+	mov	#10, r12
 	call	#delay
 	mov	#-256, r12
 	clr	r13
 	call	#mmio_write
-	mov	#5000, r12
+	mov	#10, r12
 	call	#delay
 	jmp	.LBB2_1
 .Lfunc_end2:

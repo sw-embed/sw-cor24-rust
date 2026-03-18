@@ -53,7 +53,7 @@ demo_countdown:
     la      r2, mem_write
     jal     r1, (r2)
     pop     r1
-    la      r0, 1000
+    lc      r0, 10
     ; call delay
     push    r1
     la      r2, delay

@@ -31,9 +31,9 @@ pub unsafe fn uart_putc(ch: u16) {
 pub unsafe fn demo_blinky() -> ! {
     loop {
         mmio_write(LED_ADDR, 1);   // LED on
-        delay(5000);
+        delay(10);
         mmio_write(LED_ADDR, 0);   // LED off
-        delay(5000);
+        delay(10);
     }
 }
 

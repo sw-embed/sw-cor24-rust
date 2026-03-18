@@ -2,18 +2,18 @@ Assembled 123 bytes
 Running (speed: max IPS, time limit: 2s)...
 
 LEDs: ○○○○○○○[91m●[0m  (0x01)  
-Executed 174740000 instructions
+Executed 171420000 instructions
 
 === Registers ===
-  PC:  0x000042    C: 0
-  r0:  0xFF0000  (16711680)
-  r1:  0x00006F  (     111)
-  r2:  0x000001  (       1)
+  PC:  0x000063    C: 0
+  r0:  0x000001  (       1)
+  r1:  0x000048  (      72)
+  r2:  0x000061  (      97)
   fp:  0xFEEC00
-  sp:  0xFEEBFD
+  sp:  0xFEEBFA
 
 === Emulator ===
-  Instructions: 174740000
+  Instructions: 171420000
   Halted: false
 
 === SRAM 000000-0FFFFF (1 MB) ===

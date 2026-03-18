@@ -41,7 +41,7 @@ demo_countdown:
 	mov	#256, r12
 	mov	r10, r13
 	call	#mem_write
-	mov	#1000, r12
+	mov	#10, r12
 	call	#delay
 	add	#-1, r10
 	tst	r10

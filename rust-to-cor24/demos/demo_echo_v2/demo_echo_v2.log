@@ -5,10 +5,10 @@ Running (speed: max IPS, time limit: 2s)...
 
 UART output: ?
 
-Executed 207090000 instructions
+Executed 206300000 instructions
 
 === Registers ===
-  PC:  0x000071    C: 1
+  PC:  0x00006E    C: 1
   r0:  0x000000  (       0)
   r1:  0xFF0010  (16711696)
   r2:  0x000045  (      69)
@@ -16,7 +16,7 @@ Executed 207090000 instructions
   sp:  0xFEEC00
 
 === Emulator ===
-  Instructions: 207090000
+  Instructions: 206300000
   Halted: false
 
 === SRAM 000000-0FFFFF (1 MB) ===
@@ -27,7 +27,7 @@ Executed 207090000 instructions
   000040: D0 7B 7A 79 68 38 00 27 55 18 87 00 27 44 3F 7E  |.{zyh8.'U...'D?~|
   000050: 2B 8F 00 00 D2 7A 29 33 00 00 67 44 01 2A 10 00  |+....z)3..gD.*..|
   000060: FF 81 00 29 00 01 00 7E 2B 45 00 00 D2 7A C8 14  |...)...~+E...z..|
-  000070: 01 00 13 ED 13 FC A6 18 7D 4D 18 09 9F A6 18 79  |........}M.....y|
+  000070: 01 FF 13 ED 13 FC A6 18 7D 4D 18 09 9F A6 18 79  |........}M.....y|
   000080: 7D 4D 18 7F 46 1A 20 7B 79 14 01 46 5F 0E 27 A6  |}M..F. {y..F_.'.|
   000090: 18 29 00 01 FF 2B 48 00 00 28 00 00 00 00 00 00  |.)...+H..(......|
   0000A0..0FFFFF: 1048416 bytes all zero

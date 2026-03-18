@@ -81,7 +81,7 @@ demo_blinky:
     la      r2, mmio_write
     jal     r1, (r2)
     pop     r1
-    la      r0, 5000
+    lc      r0, 10
     ; call delay
     push    r1
     la      r2, delay
@@ -97,7 +97,7 @@ demo_blinky:
     la      r2, mmio_write
     jal     r1, (r2)
     pop     r1
-    la      r0, 5000
+    lc      r0, 10
     ; call delay
     push    r1
     la      r2, delay
