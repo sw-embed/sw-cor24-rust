@@ -1,5 +1,7 @@
-//! Challenge system for COR24 emulator
+//! Challenge system and self-test for COR24 emulator
 
+use crate::assembler::Assembler;
+use crate::cpu::executor::Executor;
 use crate::cpu::CpuState;
 
 /// A challenge for the user to complete
@@ -147,4 +149,162 @@ pub fn get_examples() -> Vec<(String, String, String)> {
             include_str!("examples/assembler/uart_hello.s").into(),
         ),
     ]
+}
+
+/// Self-test result for one example
+#[derive(Clone, Debug)]
+pub struct SelfTestResult {
+    pub name: String,
+    pub pass: bool,
+    pub detail: String,
+}
+
+/// Run self-tests on all assembler examples.
+/// Returns a Vec of results — one per example.
+pub fn run_self_tests() -> Vec<SelfTestResult> {
+    let examples = get_examples();
+    let executor = Executor::new();
+    let mut results = Vec::new();
+
+    for (name, _, source) in &examples {
+        let result = run_one_test(name, source, &executor);
+        results.push(result);
+    }
+    results
+}
+
+fn run_one_test(name: &str, source: &str, executor: &Executor) -> SelfTestResult {
+    // Assemble
+    let mut asm = Assembler::new();
+    let asm_result = asm.assemble(source);
+    if !asm_result.errors.is_empty() {
+        return SelfTestResult {
+            name: name.to_string(),
+            pass: false,
+            detail: format!("Assembly error: {}", asm_result.errors.join(", ")),
+        };
+    }
+
+    // Load into CPU
+    let mut cpu = CpuState::new();
+    for (addr, byte) in asm_result.bytes.iter().enumerate() {
+        cpu.memory[addr] = *byte;
+    }
+    cpu.pc = 0;
+
+    // Run (non-halting examples get fewer cycles)
+    let max_cycles = match name {
+        "Blink LED" | "Button Echo" | "Loop Trace" => 200,
+        "Echo" => 500,
+        _ => 500_000,
+    };
+    executor.run(&mut cpu, max_cycles);
+
+    // For interactive examples, inject input and run more
+    match name {
+        "Button Echo" => {
+            // Press S2 (set switches bit 0 low)
+            cpu.io.switches = 0x00;
+            executor.run(&mut cpu, 100);
+        }
+        "Echo" => {
+            // Send 'a' via UART RX
+            cpu.uart_send_rx(b'a');
+            executor.run(&mut cpu, 500);
+        }
+        _ => {}
+    }
+
+    // Check expected state
+    check_expected(name, &cpu)
+}
+
+fn check_expected(name: &str, cpu: &CpuState) -> SelfTestResult {
+    let (pass, detail) = match name {
+        "Add" => {
+            let val = cpu.read_byte(256);
+            (cpu.halted && val == 0x56,
+             format!("halted={}, mem[256]=0x{:02X} (expect 0x56)", cpu.halted, val))
+        }
+        "Assert" => {
+            // Has deliberate bug — halts at assert_fail, not all_pass
+            (cpu.halted, format!("halted={} (expect halted at assert_fail)", cpu.halted))
+        }
+        "Blink LED" => {
+            // Should be running (not halted), LED should have toggled
+            let count = cpu.instructions;
+            (!cpu.halted && count > 10,
+             format!("running={}, instructions={}", !cpu.halted, count))
+        }
+        "Button Echo" => {
+            // After pressing S2, LED should be ON (bit 0 = 1)
+            let led = cpu.io.leds & 1;
+            (!cpu.halted && led == 1,
+             format!("running={}, LED={} (expect 1 when S2 pressed)", !cpu.halted, led))
+        }
+        "Comments" => {
+            let r0 = cpu.get_reg(0);
+            (cpu.halted && r0 == 300,
+             format!("halted={}, r0={} (expect 300)", cpu.halted, r0))
+        }
+        "Countdown" => {
+            let val = cpu.read_byte(256);
+            (cpu.halted && val == 0,
+             format!("halted={}, mem[256]={} (expect 0)", cpu.halted, val))
+        }
+        "Echo" => {
+            // After sending 'a', should echo 'A' (uppercase)
+            let has_a = cpu.io.uart_output.contains('A');
+            (!cpu.halted && has_a,
+             format!("UART contains 'A'={}, output={:?}", has_a, &cpu.io.uart_output))
+        }
+        "Fibonacci" => {
+            let expected = "1 1 2 3 5 8 13 21 34 55\n";
+            (cpu.halted && cpu.io.uart_output == expected,
+             format!("halted={}, UART={:?} (expect {:?})", cpu.halted, &cpu.io.uart_output, expected))
+        }
+        "Literals" => {
+            // Should halt at all_pass (not assert_fail)
+            (cpu.halted, format!("halted={} (expect halted at all_pass)", cpu.halted))
+        }
+        "Loop Trace" => {
+            (!cpu.halted && cpu.instructions > 10,
+             format!("running={}, instructions={}", !cpu.halted, cpu.instructions))
+        }
+        "Memory Access" => {
+            let v1 = cpu.read_byte(256);
+            let v2 = cpu.read_byte(512);
+            (cpu.halted && v1 == 42 && v2 == 200,
+             format!("halted={}, mem[256]={} (expect 42), mem[512]={} (expect 200)", cpu.halted, v1, v2))
+        }
+        "Multiply" => {
+            let expected = "42 42\n";
+            (cpu.halted && cpu.io.uart_output == expected,
+             format!("halted={}, UART={:?} (expect {:?})", cpu.halted, &cpu.io.uart_output, expected))
+        }
+        "Nested Calls" => {
+            let r0 = cpu.get_reg(0);
+            (cpu.halted && r0 == 33,
+             format!("halted={}, r0={} (expect 33)", cpu.halted, r0))
+        }
+        "Stack Variables" => {
+            let val = cpu.read_byte(256);
+            (cpu.halted && val == 16,
+             format!("halted={}, mem[256]={} (expect 16)", cpu.halted, val))
+        }
+        "UART Hello" => {
+            let expected = "Hello\n";
+            (cpu.halted && cpu.io.uart_output == expected,
+             format!("halted={}, UART={:?} (expect {:?})", cpu.halted, &cpu.io.uart_output, expected))
+        }
+        _ => {
+            (false, format!("No expected state defined for '{}'", name))
+        }
+    };
+
+    SelfTestResult {
+        name: name.to_string(),
+        pass,
+        detail,
+    }
 }

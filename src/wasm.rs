@@ -331,6 +331,17 @@ pub fn validate_challenge(challenge_id: usize, source: &str) -> Result<bool, JsV
     }
 }
 
+/// Run self-tests on all assembler examples. Returns JSON array of results.
+#[wasm_bindgen]
+pub fn run_self_tests() -> String {
+    let results = crate::challenge::run_self_tests();
+    let json: Vec<String> = results.iter().map(|r| {
+        format!(r#"{{"name":"{}","pass":{},"detail":"{}"}}"#,
+            r.name, r.pass, r.detail.replace('"', "'"))
+    }).collect();
+    format!("[{}]", json.join(","))
+}
+
 /// Initialize the WASM module and mount Yew app
 #[wasm_bindgen(start)]
 pub fn init() {
