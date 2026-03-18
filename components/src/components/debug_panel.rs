@@ -4,6 +4,7 @@
 use std::cell::Cell;
 use std::rc::Rc;
 
+use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 use yew::prelude::*;
 
@@ -73,22 +74,28 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
     // Mirror of Rc<Cell> speed for display re-rendering
     let speed_display = use_state(|| props.run_speed_ms.as_ref().map_or(10, |rc| rc.get()));
 
-    // Auto-scroll assembly listing to keep current instruction visible
+    // Auto-scroll listing container (only) to keep current instruction visible.
+    // Scrolls the listing-scroll div, NOT the page or notebook.
     {
         let pc = state.pc;
         let instruction_count = state.instruction_count;
         let scroll_id = props.listing_scroll_id.clone().unwrap_or_else(|| "debug-asm-listing-scroll".to_string());
         use_effect_with((pc, instruction_count), move |_| {
-            // Use gloo timeout to ensure DOM has updated with new .current-line
             gloo::timers::callback::Timeout::new(0, move || {
                 if let Some(window) = web_sys::window()
                     && let Some(document) = window.document()
                     && let Some(container) = document.get_element_by_id(&scroll_id)
                     && let Some(element) = container.query_selector(".asm-line.current-line").ok().flatten()
                 {
-                    // scrollIntoView with block:"nearest" avoids jarring jumps
-                    // but ensures the line is visible
-                    element.scroll_into_view();
+                    let el: &web_sys::HtmlElement = element.unchecked_ref();
+                    let ct: &web_sys::HtmlElement = container.unchecked_ref();
+                    let el_top = el.offset_top();
+                    let ct_height = ct.client_height();
+                    let ct_scroll = container.scroll_top();
+                    // Only scroll if current line is outside the visible area
+                    if el_top < ct_scroll || el_top > ct_scroll + ct_height - 20 {
+                        container.set_scroll_top(el_top - ct_height / 3);
+                    }
                 }
             }).forget();
         });
