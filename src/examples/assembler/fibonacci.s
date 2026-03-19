@@ -36,10 +36,7 @@ skip_sp:
         add     r1,r0           ; b = a + b (new fib)
         pop     r0              ; a = old b
 
-        push    r0
-        lc      r0,1
-        sub     r2,r0           ; counter--
-        pop     r0
+        add     r2,-1           ; --counter
         ceq     r2,z
         brf     loop
 

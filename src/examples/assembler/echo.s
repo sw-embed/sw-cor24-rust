@@ -17,6 +17,10 @@
 
 ; --- Print prompt ---
         la      r1, -65280
+.txp:
+        lb      r2, 1(r1)       ; poll TX busy
+        cls     r2, z
+        brt     .txp
         lc      r0, 63          ; '?'
         sb      r0, 0(r1)       ; transmit prompt
 
@@ -56,12 +60,20 @@ isr:
         lcu     r1, 223         ; mask to clear bit 5
         and     r0, r1          ; r0 = uppercase version
         la      r1, -65280
+.tx1:
+        lb      r2, 1(r1)      ; poll TX busy
+        cls     r2, z
+        brt     .tx1
         sb      r0, 0(r1)      ; transmit uppercase
         bra     isr_done
 
 not_lower:
         ; Not lowercase — echo as-is (already uppercase or non-letter)
         la      r1, -65280
+.tx2:
+        lb      r0, 1(r1)      ; poll TX busy
+        cls     r0, z
+        brt     .tx2
         sb      r2, 0(r1)      ; transmit original character
 
 isr_done:

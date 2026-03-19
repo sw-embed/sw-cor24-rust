@@ -17,10 +17,7 @@
         lc      r1,7            ; counter = 7
 loop:
         add     r0,6            ; sum += 6
-        push    r0
-        lc      r0,1
-        sub     r1,r0           ; counter--
-        pop     r0
+        add     r1,-1           ; --counter
         ceq     r1,z
         brf     loop
 

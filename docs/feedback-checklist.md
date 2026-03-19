@@ -67,10 +67,9 @@ Sources: email feedback (docs/*.txt), meeting notes (docs/cor24-meet-notes-20260
 Luther noted: use `add r2,-1` instead of loading a constant and subtracting.
 This saves one instruction and avoids clobbering another register.
 
-- [ ] **countdown.s lines 11-12**: `lc r2,1; sub r0,r2` → should be `add r0,-1`
-- [ ] **fibonacci.s lines 40-41**: `lc r0,1; sub r2,r0; pop r0` → should be `add r2,-1`
-  (also eliminates the push/pop r0 around it since r0 isn't needed)
-- [ ] **multiply.s**: check for same pattern
+- [x] **countdown.s**: `lc r2,1; sub r0,r2` → `add r0,-1`
+- [x] **fibonacci.s**: `push r0; lc r0,1; sub r2,r0; pop r0` → `add r2,-1` (saves 3 instructions)
+- [x] **multiply.s**: `push r0; lc r0,1; sub r1,r0; pop r0` → `add r1,-1` (saves 3 instructions)
 
 ### Pre-decrement counter pattern (meeting notes)
 
@@ -89,15 +88,14 @@ Pre-decrementing then testing is more idiomatic:
     brf loop
 ```
 
-- [ ] Apply to fibonacci.s counter loop
-- [ ] Apply to countdown.s counter loop
+- [x] Applied to fibonacci.s, countdown.s, multiply.s counter loops
 
 ### Echo example TX busy check (meeting notes)
 
 Luther noted: "assembler example Echo also needs to check for TX busy"
 
-- [ ] **echo.s**: writes to UART at lines 59 and 65 without checking TX busy
-  first. Should poll status register with cls/brt before each sb to UART data.
+- [x] **echo.s**: added cls/brt TX busy poll before all three UART writes
+  (prompt, uppercase echo, as-is echo)
 
 ### C fib example line 11 (meeting notes)
 

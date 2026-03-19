@@ -8,8 +8,7 @@
 loop:
         sb      r0,0(r1)    ; Write count to memory
 
-        lc      r2,1
-        sub     r0,r2       ; count--
+        add     r0,-1       ; --count
         ceq     r0,z        ; count == 0?
         brf     loop        ; Continue if not zero
 
