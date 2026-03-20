@@ -43,6 +43,16 @@ emit_panic:
 .Lfunc_end2:
 	.size	emit_panic, .Lfunc_end2-emit_panic
 
+	.section	.text.mmio_read,"ax",@progbits
+	.globl	mmio_read
+	.p2align	1
+	.type	mmio_read,@function
+mmio_read:
+	mov.b	0(r12), r12
+	ret
+.Lfunc_end3:
+	.size	mmio_read, .Lfunc_end3-mmio_read
+
 	.section	.text.mmio_write,"ax",@progbits
 	.globl	mmio_write
 	.p2align	1
@@ -50,8 +60,8 @@ emit_panic:
 mmio_write:
 	mov.b	r13, 0(r12)
 	ret
-.Lfunc_end3:
-	.size	mmio_write, .Lfunc_end3-mmio_write
+.Lfunc_end4:
+	.size	mmio_write, .Lfunc_end4-mmio_write
 
 	.section	.text.start,"ax",@progbits
 	.globl	start
@@ -59,20 +69,28 @@ mmio_write:
 	.type	start,@function
 start:
 	call	#demo_panic
-.Lfunc_end4:
-	.size	start, .Lfunc_end4-start
+.Lfunc_end5:
+	.size	start, .Lfunc_end5-start
 
 	.section	.text.uart_putc,"ax",@progbits
 	.globl	uart_putc
 	.p2align	1
 	.type	uart_putc,@function
 uart_putc:
-	mov	r12, r13
+	push	r10
+	mov	r12, r10
+.LBB6_1:
+	mov	#-254, r12
+	call	#mmio_read
+	tst.b	r12
+	jl	.LBB6_1
 	mov	#-255, r12
+	mov	r10, r13
 	call	#mmio_write
+	pop	r10
 	ret
-.Lfunc_end5:
-	.size	uart_putc, .Lfunc_end5-uart_putc
+.Lfunc_end6:
+	.size	uart_putc, .Lfunc_end6-uart_putc
 
 	.ident	"rustc version 1.93.0-nightly (c871d09d1 2025-11-24)"
 	.section	".note.GNU-stack","",@progbits

@@ -44,6 +44,16 @@ isr_handler:
 .Lfunc_end0:
 	.size	isr_handler, .Lfunc_end0-isr_handler
 
+	.section	.text.mmio_read,"ax",@progbits
+	.globl	mmio_read
+	.p2align	1
+	.type	mmio_read,@function
+mmio_read:
+	mov.b	0(r12), r12
+	ret
+.Lfunc_end1:
+	.size	mmio_read, .Lfunc_end1-mmio_read
+
 	.section	.text.mmio_write,"ax",@progbits
 	.globl	mmio_write
 	.p2align	1
@@ -51,8 +61,8 @@ isr_handler:
 mmio_write:
 	mov.b	r13, 0(r12)
 	ret
-.Lfunc_end1:
-	.size	mmio_write, .Lfunc_end1-mmio_write
+.Lfunc_end2:
+	.size	mmio_write, .Lfunc_end2-mmio_write
 
 	.section	.text.start,"ax",@progbits
 	.globl	start
@@ -70,26 +80,34 @@ start:
 	; @cor24: la r1, -65520
 	; @cor24: sb r0, 0(r1)
 	;NO_APP
-.LBB2_1:
+.LBB3_1:
 	;APP
 	nop
 
 	;NO_APP
-	jmp	.LBB2_1
-.Lfunc_end2:
-	.size	start, .Lfunc_end2-start
+	jmp	.LBB3_1
+.Lfunc_end3:
+	.size	start, .Lfunc_end3-start
 
 	.section	.text.uart_putc,"ax",@progbits
 	.globl	uart_putc
 	.p2align	1
 	.type	uart_putc,@function
 uart_putc:
-	mov	r12, r13
+	push	r10
+	mov	r12, r10
+.LBB4_1:
+	mov	#-254, r12
+	call	#mmio_read
+	tst.b	r12
+	jl	.LBB4_1
 	mov	#-255, r12
+	mov	r10, r13
 	call	#mmio_write
+	pop	r10
 	ret
-.Lfunc_end3:
-	.size	uart_putc, .Lfunc_end3-uart_putc
+.Lfunc_end4:
+	.size	uart_putc, .Lfunc_end4-uart_putc
 
 	.ident	"rustc version 1.93.0-nightly (c871d09d1 2025-11-24)"
 	.ident	"rustc version 1.93.0-nightly (c871d09d1 2025-11-24)"

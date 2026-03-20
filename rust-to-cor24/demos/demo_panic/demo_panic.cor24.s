@@ -76,12 +76,18 @@ emit_panic:
     bra     .LBB2_1
 .Lfunc_end2:
 
+; --- function: mmio_read ---
+mmio_read:
+    lbu      r0, 0(r0)
+    jmp     (r1)
+.Lfunc_end3:
+
 ; --- function: mmio_write ---
 mmio_write:
     lw      r2, 24(fp)
     sb      r2, 0(r0)
     jmp     (r1)
-.Lfunc_end3:
+.Lfunc_end4:
 
 ; --- function: start ---
 start:
@@ -90,14 +96,38 @@ start:
     la      r2, demo_panic
     jal     r1, (r2)
     pop     r1
-.Lfunc_end4:
+.Lfunc_end5:
 
 ; --- function: uart_putc ---
 uart_putc:
-    sw      r0, 24(fp)
+    sw      r0, 30(fp)
+    lw      r0, 18(fp)
+    push    r0
+    lw      r0, 30(fp)
+    sw      r0, 18(fp)
+.LBB6_1:
+    la      r0, -65279
+    ; call mmio_read
+    push    r1
+    la      r2, mmio_read
+    jal     r1, (r2)
+    pop     r1
+    ceq     r0, z
+    brt     .LBB6_1
     la      r0, -65280
-    ; tail call mmio_write
+    push    r0
+    lw      r0, 18(fp)
+    sw      r0, 24(fp)
+    pop     r0
+    ; call mmio_write
+    push    r1
     la      r2, mmio_write
-    jmp     (r2)
-.Lfunc_end5:
+    jal     r1, (r2)
+    pop     r1
+    sw      r0, 30(fp)
+    pop     r0
+    sw      r0, 18(fp)
+    lw      r0, 30(fp)
+    jmp     (r1)
+.Lfunc_end6:
 

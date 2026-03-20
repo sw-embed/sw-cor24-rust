@@ -1082,15 +1082,16 @@ fn operand_to_reg(op: &MspOperand) -> Result<String> {
 
 /// Map MSP430 16-bit I/O addresses to COR24 24-bit I/O addresses.
 /// MSP430 uses 16-bit addresses (0xFF00-0xFF02) that sign-extend to wrong 24-bit values.
-/// Convention: MSP430 addr 0xFFXX → COR24 addr 0xFFXX00 (shift left 8 bits).
-/// Only applies to the known I/O address range (0xFF00-0xFF02, i.e., -256 to -254).
+/// Maps MSP430 I/O addresses to COR24 24-bit addresses:
+///   0xFF00 (-256) → 0xFF0000 (LED/Button)
+///   0xFF01 (-255) → 0xFF0100 (UART data)
+///   0xFF02 (-254) → 0xFF0101 (UART status — byte offset from UART data)
 fn map_io_address_imm(val: i32) -> i32 {
-    // Check for MSP430 I/O addresses: -256 (0xFF00), -255 (0xFF01), -254 (0xFF02)
-    if (-256..=-254).contains(&val) {
-        let u16val = (val as u16) as u32;  // 0xFF00, 0xFF01, 0xFF02
-        (u16val << 8) as i32              // 0xFF0000, 0xFF0100, 0xFF0200
-    } else {
-        val
+    match val {
+        -256 => 0x00FF0000_u32 as i32,  // 0xFF00 → LED/Button
+        -255 => 0x00FF0100_u32 as i32,  // 0xFF01 → UART data
+        -254 => 0x00FF0101_u32 as i32,  // 0xFF02 → UART status
+        _ => val,
     }
 }
 

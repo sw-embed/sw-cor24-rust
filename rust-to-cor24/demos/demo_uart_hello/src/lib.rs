@@ -5,6 +5,7 @@
 #![no_std]
 
 const UART_DATA: u16 = 0xFF01;
+const UART_STAT: u16 = 0xFF02;
 
 #[inline(never)]
 #[no_mangle]
@@ -14,7 +15,15 @@ pub unsafe fn mmio_write(addr: u16, val: u16) {
 
 #[inline(never)]
 #[no_mangle]
+pub unsafe fn mmio_read(addr: u16) -> u8 {
+    core::ptr::read_volatile(addr as *const u8)
+}
+
+#[inline(never)]
+#[no_mangle]
 pub unsafe fn uart_putc(ch: u16) {
+    // Poll TX busy (bit 7 of status register) before writing
+    while (mmio_read(UART_STAT) & 0x80) != 0 {}
     mmio_write(UART_DATA, ch);
 }
 
