@@ -140,6 +140,65 @@ pub unsafe fn start() -> ! {
 The `#[no_mangle]` attribute makes both functions visible as `.globl` symbols in
 the MSP430 assembly output. The translator finds `start` and emits the prologue.
 
+## How to Run
+
+### Quick start: run a pre-built demo
+
+```bash
+cd rust-to-cor24/demos
+bash demo_fibonacci/run.sh
+```
+
+This does all three steps automatically:
+1. Compiles `src/lib.rs` → `demo_fibonacci.msp430.s` (via `rustc`)
+2. Translates → `demo_fibonacci.cor24.s` (via `msp430-to-cor24`)
+3. Assembles + runs → dumps registers, memory, UART (via `cor24-run`)
+
+### Run all 13 demos
+
+```bash
+cd rust-to-cor24/demos
+bash generate-all.sh
+```
+
+### Step by step (manual)
+
+```bash
+# Build the tools first
+cd rust-to-cor24
+cargo build --release
+
+# Step 1: Compile Rust → MSP430 assembly
+cd demos/demo_fibonacci
+rustup run nightly cargo rustc \
+    --target msp430-none-elf \
+    -Z build-std=core --release \
+    -- --emit asm
+cp target/msp430-none-elf/release/deps/demo_fibonacci*.s demo_fibonacci.msp430.s
+
+# Step 2: Translate MSP430 → COR24 assembly
+../../target/release/msp430-to-cor24 demo_fibonacci.msp430.s \
+    -o demo_fibonacci.cor24.s --entry start
+
+# Step 3: Assemble + run in COR24 emulator
+../../target/release/cor24-run --run demo_fibonacci.cor24.s --dump
+```
+
+### Files produced
+
+After running a demo, the directory contains:
+```
+demo_fibonacci/
+    src/lib.rs                    ← Rust source (you write this)
+    demo_fibonacci.msp430.s       ← MSP430 assembly (rustc output)
+    demo_fibonacci.cor24.s        ← COR24 assembly (translator output)
+    demo_fibonacci.log            ← Emulator output (registers, memory)
+```
+
+All intermediate files are human-readable text. There is no binary
+object format — `cor24-run` assembles the `.cor24.s` file to bytes
+in memory and executes directly.
+
 ## Register Mapping
 
 | MSP430 | COR24 | Role |
@@ -152,24 +211,19 @@ the MSP430 assembly output. The translator finds `start` and emits the prologue.
 
 ## Calling Convention
 
-The translator currently uses a **simplified calling convention** that differs from
-the standard COR24 C compiler convention designed by Luther Johnson (COR24 architect).
+The translator uses the `jal` (jump-and-link) calling convention, matching
+Luther Johnson's COR24 C compiler:
 
-| Aspect | Current Translator | Standard COR24 (Luther's) |
-|--------|-------------------|---------------------------|
-| **Function call** | `la r2, func; push r2; la r2, target; jmp (r2)` (4 insn, 10 bytes) | `la r0, func; jal r1,(r0)` (2 insn, 5 bytes) |
-| **Return** | `pop r2; jmp (r2)` | `jmp (r1)` |
-| **Arguments** | In registers (r0=arg0, r1=arg1, r2=arg2) | On the stack |
-| **Return value** | In r0 | In r0 |
-| **Prologue** | None (saves only what's needed) | `push fp; push r2; push r1; mov fp,sp` |
-| **Epilogue** | None | `pop r1; pop r2; pop fp; jmp (r1)` |
+| Aspect | Implementation |
+|--------|----------------|
+| **Function call** | `la r2, func; jal r1,(r2)` — r1 gets return address |
+| **Return** | `jmp (r1)` |
+| **Arguments** | In r0 (from MSP430 r12 mapping) |
+| **Return value** | In r0 |
+| **Caller saves** | `push r1` before `jal`, `pop r1` after |
 
-The `jal` (jump-and-link) instruction is the COR24's dedicated call instruction. It
-saves the return address in r1 automatically, eliminating the need to compute and push
-a return label. The translator's current approach bypasses `jal` entirely.
-
-A phased plan to adopt `jal` and the standard calling convention is documented in
-[docs/research/20260314-cor24-plan.md](../docs/research/20260314-cor24-plan.md).
+The `jal` instruction saves the return address in r1 and jumps to the
+address in r2, in a single instruction.
 
 ## I/O Address Mapping
 
