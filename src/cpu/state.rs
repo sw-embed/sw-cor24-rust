@@ -61,6 +61,12 @@ pub struct IoState {
     pub uart_tx_busy: bool,
     /// UART TX busy countdown (instructions remaining until TX ready)
     pub uart_tx_countdown: u8,
+    /// Number of instructions UART stays busy after a write (default: 10)
+    pub uart_tx_busy_cycles: u8,
+    /// If true, UART TX busy never clears (for testing poll-before-write)
+    pub uart_never_ready: bool,
+    /// Count of characters dropped due to writing while TX busy
+    pub uart_tx_dropped: u32,
     /// UART receive buffer
     pub uart_rx: u8,
     /// UART receive data ready flag
@@ -77,7 +83,10 @@ impl IoState {
     pub fn new() -> Self {
         Self {
             leds: 0,
-            switches: 0x01, // S2 normally high (low = pressed)
+            switches: 0x01,          // S2 normally high (low = pressed)
+            uart_tx_busy_cycles: 10, // realistic: 10 instructions per character
+            uart_never_ready: false,
+            uart_tx_dropped: 0,
             uart_tx: 0,
             uart_tx_busy: false, // TX starts ready
             uart_tx_countdown: 0,
@@ -464,14 +473,21 @@ impl CpuState {
                 self.io.int_enable = value;
             }
             IO_UARTDATA => {
-                self.io.uart_tx = value;
-                // Append to output buffer (for terminal display)
-                if value != 0 {
-                    self.io.uart_output.push(value as char);
+                if self.io.uart_tx_busy {
+                    // Write while busy — character dropped (hardware would ignore)
+                    self.io.uart_tx_dropped += 1;
+                } else {
+                    self.io.uart_tx = value;
+                    if value != 0 {
+                        self.io.uart_output.push(value as char);
+                    }
+                    // TX busy for N cycles (simulates transmission time)
+                    if self.io.uart_tx_busy_cycles > 0 {
+                        self.io.uart_tx_busy = true;
+                        self.io.uart_tx_countdown = self.io.uart_tx_busy_cycles;
+                    }
+                    // cycles=0 means instant ready (legacy/test mode)
                 }
-                // TX busy for 1 instruction cycle (simulates transmission)
-                self.io.uart_tx_busy = true;
-                self.io.uart_tx_countdown = 1;
             }
             IO_UARTSTAT => {
                 // Writing to status can clear overflow flag
@@ -485,6 +501,10 @@ impl CpuState {
 
     /// Tick UART timers — call after each instruction execution
     pub fn uart_tick(&mut self) {
+        if self.io.uart_never_ready {
+            // TX stays busy forever — tests that programs poll before writing
+            return;
+        }
         if self.io.uart_tx_countdown > 0 {
             self.io.uart_tx_countdown -= 1;
             if self.io.uart_tx_countdown == 0 {

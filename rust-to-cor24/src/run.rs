@@ -175,6 +175,7 @@ struct CliArgs {
     uart_input: Vec<u8>,             // characters to send to UART RX
     trace: usize,                    // number of trace entries to dump (0 = off)
     step: bool,                      // step mode: print each instruction
+    uart_never_ready: bool,          // UART TX never becomes ready (test polling)
 }
 
 fn parse_args() -> CliArgs {
@@ -190,6 +191,7 @@ fn parse_args() -> CliArgs {
         uart_input: Vec::new(),
         trace: 0,
         step: false,
+        uart_never_ready: false,
     };
 
     let mut i = 1;
@@ -272,6 +274,9 @@ fn parse_args() -> CliArgs {
             }
             "--step" => {
                 cli.step = true;
+            }
+            "--uart-never-ready" => {
+                cli.uart_never_ready = true;
             }
             _ => {
                 if cli.command.is_empty() && !args[i].starts_with('-') {
@@ -508,6 +513,7 @@ fn main() {
         println!("  --dump               Dump CPU state, I/O, and non-zero memory after halt");
         println!("  --trace <N>          Dump last N instructions on halt/timeout (default: 50)");
         println!("  --step               Print each instruction as it executes");
+        println!("  --uart-never-ready   UART TX stays busy forever (test polling)");
         println!("  --entry, -e <label>  Set entry point to label address");
         println!();
         println!("Example:");
@@ -577,6 +583,9 @@ fn main() {
 
             // Set entry point if specified
             let mut emu = EmulatorCore::new();
+            if cli.uart_never_ready {
+                emu.set_uart_never_ready(true);
+            }
             load_assembled(&mut emu, &result);
 
             if let Some(entry_label) = &cli.entry {

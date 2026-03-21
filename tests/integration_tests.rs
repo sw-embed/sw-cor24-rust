@@ -11,6 +11,7 @@ fn load_and_run(lgo_path: &str, entry: u32, max_cycles: u64) -> CpuState {
     let content = std::fs::read_to_string(lgo_path)
         .unwrap_or_else(|e| panic!("Cannot read {}: {}", lgo_path, e));
     let mut cpu = CpuState::new();
+    cpu.io.uart_tx_busy_cycles = 0; // legacy: instant TX for .lgo programs that don't poll
     load_lgo(&content, &mut cpu).unwrap();
     cpu.pc = entry;
     let executor = Executor::new();
@@ -136,12 +137,14 @@ fn test_multiply_example() {
     assert_eq!(cpu.io.uart_output, "42 42\n", "Multiply should print '42 42\\n'");
 }
 
-/// Helper: assemble source, run, and return CPU state
+/// Helper: assemble source, run, and return CPU state.
+/// Uses instant UART TX (busy_cycles=0) for legacy tests that don't poll.
 fn assemble_and_run(source: &str, max_cycles: u64) -> CpuState {
     let mut assembler = Assembler::new();
     let result = assembler.assemble(source);
     assert!(result.errors.is_empty(), "Assembly errors: {:?}", result.errors);
     let mut cpu = CpuState::new();
+    cpu.io.uart_tx_busy_cycles = 0; // legacy: instant TX for tests that don't poll
     for (addr, byte) in result.bytes.iter().enumerate() {
         cpu.memory[addr] = *byte;
     }
@@ -337,4 +340,107 @@ fn test_echo_example() {
     cpu.uart_send_rx(b'!');
     executor.run(&mut cpu, 1000);
     assert!(cpu.halted, "Should halt on '!'");
+}
+
+// ===== UART TX Discipline Tests =====
+
+/// Program that writes to UART WITHOUT polling TX busy.
+/// With realistic timing (busy_cycles=10), characters should be dropped.
+#[test]
+fn test_uart_no_poll_drops_characters() {
+    let source = r#"
+        la      r1,-65280
+        lc      r0,65
+        sb      r0,0(r1)
+        lc      r0,66
+        sb      r0,0(r1)
+        lc      r0,67
+        sb      r0,0(r1)
+halt:
+        bra     halt
+    "#;
+    let mut assembler = Assembler::new();
+    let result = assembler.assemble(source);
+    assert!(result.errors.is_empty());
+    let mut cpu = CpuState::new();
+    // Realistic: 10 cycles busy after each write
+    cpu.io.uart_tx_busy_cycles = 10;
+    for (addr, byte) in result.bytes.iter().enumerate() {
+        cpu.memory[addr] = *byte;
+    }
+    cpu.pc = 0;
+    let executor = Executor::new();
+    executor.run(&mut cpu, 10_000);
+    // Only first character should get through — B and C written while busy
+    assert_eq!(cpu.io.uart_output, "A", "Only 'A' should transmit; B,C dropped while busy");
+    assert_eq!(cpu.io.uart_tx_dropped, 2, "B and C should be dropped");
+}
+
+/// Program that correctly polls TX busy before each write.
+/// All characters should transmit even with realistic timing.
+#[test]
+fn test_uart_with_poll_all_characters() {
+    let source = r#"
+        la      r1,-65280
+        lc      r0,65
+.w1:    lb      r2,1(r1)
+        cls     r2,z
+        brt     .w1
+        sb      r0,0(r1)
+        lc      r0,66
+.w2:    lb      r2,1(r1)
+        cls     r2,z
+        brt     .w2
+        sb      r0,0(r1)
+        lc      r0,67
+.w3:    lb      r2,1(r1)
+        cls     r2,z
+        brt     .w3
+        sb      r0,0(r1)
+halt:
+        bra     halt
+    "#;
+    let mut assembler = Assembler::new();
+    let result = assembler.assemble(source);
+    assert!(result.errors.is_empty());
+    let mut cpu = CpuState::new();
+    cpu.io.uart_tx_busy_cycles = 10;
+    for (addr, byte) in result.bytes.iter().enumerate() {
+        cpu.memory[addr] = *byte;
+    }
+    cpu.pc = 0;
+    let executor = Executor::new();
+    executor.run(&mut cpu, 10_000);
+    assert_eq!(cpu.io.uart_output, "ABC", "All characters should transmit with polling");
+    assert_eq!(cpu.io.uart_tx_dropped, 0, "No characters should be dropped");
+}
+
+/// With uart_never_ready, a polling program should hang (not halt).
+#[test]
+fn test_uart_never_ready_hangs_polling_program() {
+    let source = r#"
+        la      r1,-65280
+.wait:  lb      r2,1(r1)
+        cls     r2,z
+        brt     .wait
+        lc      r0,65
+        sb      r0,0(r1)
+halt:
+        bra     halt
+    "#;
+    let mut assembler = Assembler::new();
+    let result = assembler.assemble(source);
+    assert!(result.errors.is_empty());
+    let mut cpu = CpuState::new();
+    cpu.io.uart_never_ready = true;
+    cpu.io.uart_tx_busy = true; // start busy
+    for (addr, byte) in result.bytes.iter().enumerate() {
+        cpu.memory[addr] = *byte;
+    }
+    cpu.pc = 0;
+    let executor = Executor::new();
+    executor.run(&mut cpu, 10_000);
+    // Should NOT have halted — stuck in .wait loop
+    assert!(!cpu.halted, "Should be stuck polling, not halted");
+    assert_eq!(cpu.io.uart_output, "", "No output — never got past poll");
 }

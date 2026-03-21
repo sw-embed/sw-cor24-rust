@@ -413,6 +413,14 @@ impl EmulatorCore {
         &self.cpu.trace
     }
 
+    /// Set UART TX never-ready mode (for testing poll-before-write discipline)
+    pub fn set_uart_never_ready(&mut self, never_ready: bool) {
+        self.cpu.io.uart_never_ready = never_ready;
+        if never_ready {
+            self.cpu.io.uart_tx_busy = true;
+        }
+    }
+
     // ===== Disassembly =====
 
     /// Disassemble one instruction at the given address.
