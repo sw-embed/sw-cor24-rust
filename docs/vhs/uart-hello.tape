@@ -1,5 +1,5 @@
 # VHS tape: UART Hello — Rust → MSP430 → COR24 pipeline
-# Shows each stage of the pipeline with pauses for narration
+# Shows each stage with pauses for narration
 # Usage: vhs docs/vhs/uart-hello.tape
 
 Output docs/vhs/uart-hello.gif
@@ -17,37 +17,37 @@ Type "# uart_putc polls TX busy before each write"
 Enter
 Sleep 3s
 
-# --- Show the Rust source ---
-Type "echo '=== Rust Source ===' && head -30 rust-to-cor24/demos/demo_uart_hello/src/lib.rs"
+# --- Show Rust source: MMIO + uart_putc (first 27 lines) ---
+Type "clear && echo '=== Rust Source: MMIO and uart_putc ===' && head -27 rust-to-cor24/demos/demo_uart_hello/src/lib.rs"
+Enter
+Sleep 6s
+
+# --- Show Rust source: demo function + entry point ---
+Type "clear && echo '=== Rust Source: demo + entry point ===' && tail -33 rust-to-cor24/demos/demo_uart_hello/src/lib.rs"
 Enter
 Sleep 6s
 
 # --- Run the pipeline, capture output ---
-Type "cd rust-to-cor24/demos && bash demo_uart_hello/run.sh > /tmp/uart-demo.txt 2>&1 && cd ../.."
+Type "clear && echo '=== Running Pipeline: Rust → MSP430 → COR24 → Emulator ===' && cd rust-to-cor24/demos && bash demo_uart_hello/run.sh > /tmp/uart-demo.txt 2>&1 && cd ../.. && echo 'Pipeline complete.'"
 Enter
 Sleep 25s
 
-# --- Show MSP430 assembly (key functions) ---
-Type "clear && echo '=== MSP430 Assembly (from rustc) ===' && grep -A 8 'uart_putc:' /tmp/uart-demo.txt"
-Enter
-Sleep 5s
-
-# --- Show COR24 assembly (translated) ---
-Type "clear && echo '=== COR24 Assembly (translated) ===' && grep -A 20 'function: uart_putc' /tmp/uart-demo.txt"
+# --- Show COR24 assembly: uart_putc function ---
+Type "clear && echo '=== COR24 Assembly: uart_putc (translated) ===' && grep -A15 'function: uart_putc' /tmp/uart-demo.txt"
 Enter
 Sleep 6s
 
-# --- Show the UART output result ---
-Type "clear && echo '=== Emulator Result ===' && grep -A 5 'UART:' /tmp/uart-demo.txt"
+# --- Show UART output result ---
+Type "clear && echo '=== Emulator Result ===' && grep -B1 -A5 'UART:' /tmp/uart-demo.txt"
 Enter
 Sleep 5s
 
 # --- Show register state ---
-Type "clear && echo '=== Final CPU State ===' && grep -A 8 '=== Registers ===' /tmp/uart-demo.txt"
+Type "clear && echo '=== Final CPU State ===' && grep -A8 '=== Registers ===' /tmp/uart-demo.txt"
 Enter
 Sleep 5s
 
 # --- Done ---
-Type "clear && echo '=== Done! UART output: Hello ===' && echo 'TX busy polling: cls r2,z / brt .wait'"
+Type "clear && echo '=== Pipeline Complete ===' && echo 'Rust source → rustc (MSP430) → translator → COR24 asm → emulator' && echo 'UART output: Hello (with TX busy polling)'"
 Enter
 Sleep 4s
