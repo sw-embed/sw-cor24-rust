@@ -46,4 +46,5 @@ halt:
 
 ; --- Source string (contiguous bytes in code) ---
 src:
-        .ascii  "Hello World!"
+        .byte 72 101 108 108 111 32 87 111 114 108 100 33
+        ; H  e   l   l   o  ' ' W   o   r   l   d   !
