@@ -1,7 +1,7 @@
 # C Tab Implementation Plan
 
 Add a "C" tab to the COR24 emulator web UI showing real C compiler output
-from Luther Johnson's COR24 C toolchain. Users step through C-compiled assembly
+from MakerLisp's COR24 C toolchain. Users step through C-compiled assembly
 using the same emulator that runs hand-written and Rust-compiled programs.
 
 ## Examples
@@ -42,7 +42,7 @@ return in r0, `jmp (r1)` return.
 
 **`src/examples/c_pipeline/`** — New directory with pre-built examples:
 - `sieve.c` — C source (for display)
-- `sieve.cor24.s` — Assembly from Luther's compiler (self-contained, runs as-is)
+- `sieve.cor24.s` — Assembly from MakerLisp's compiler (self-contained, runs as-is)
 - `fib.c` — C source (for display)
 - `fib.cor24.s` — Assembly from compiler + injected `_printf` stub
 

@@ -2,7 +2,7 @@
 
 ## What is the COR24?
 
-The COR24 is a 24-bit RISC processor designed by Luther Johnson for the
+The COR24 is a 24-bit RISC processor designed by MakerLisp for the
 [MakerLisp](https://makerlisp.com) project. "COR" stands for C-Oriented RISC.
 It runs as a soft CPU on Lattice MachXO FPGAs and is used to teach embedded
 systems concepts.

@@ -148,7 +148,7 @@ MIT License - see [LICENSE](LICENSE)
 
 - COR24 architecture by [MakerLisp](https://makerlisp.com) — designed for embedded systems education on Lattice MachXO FPGAs
 - Decode ROM extracted from original hardware Verilog
-- Reference assembler/linker (`as24`/`longlgo`) by Luther Johnson
+- Reference assembler/linker (`as24`/`longlgo`) by MakerLisp
 
 ## References
 

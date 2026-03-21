@@ -3,7 +3,7 @@
 ## Problem
 
 The Rust→MSP430→COR24 pipeline produces significantly more instructions than
-Luther Johnson's C compiler (cc24) for equivalent algorithms.
+MakerLisp's C compiler (cc24) for equivalent algorithms.
 
 ### Iterative Fibonacci Comparison
 

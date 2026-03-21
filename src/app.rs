@@ -506,7 +506,7 @@ pub fn app() -> Html {
     // Tab definitions
     let tabs = vec![
         Tab { id: "assembler".to_string(), label: "Assembler".to_string(), tooltip: Some("Write and run COR24 assembly directly".to_string()) },
-        Tab { id: "c".to_string(), label: "C".to_string(), tooltip: Some("C → COR24 compilation pipeline (Luther Johnson's cc24)".to_string()) },
+        Tab { id: "c".to_string(), label: "C".to_string(), tooltip: Some("C → COR24 compilation pipeline (MakerLisp's cc24)".to_string()) },
         Tab { id: "rust".to_string(), label: "Rust".to_string(), tooltip: Some("Rust → MSP430 → COR24 compilation pipeline".to_string()) },
     ];
 
@@ -1055,7 +1055,7 @@ pub fn app() -> Html {
 
             <ExamplePicker
                 id="c-examples"
-                title={format!("C \u{2192} COR24 Examples (Luther Johnson's cc24)")}
+                title={format!("C \u{2192} COR24 Examples (MakerLisp's cc24)")}
                 examples={c_examples.iter().map(|ex| ExampleItem { name: ex.name.clone(), description: ex.description.clone() }).collect::<Vec<_>>()}
                 active={*c_examples_open}
                 on_close={close_c_examples}
@@ -1226,7 +1226,7 @@ const TUTORIAL_CONTENT: &str = r#"
 <h3>COR24 Assembly Tutorial</h3>
 
 <h4>What is the COR24?</h4>
-<p>The COR24 is a 24-bit RISC processor designed by Luther Johnson for the
+<p>The COR24 is a 24-bit RISC processor designed by MakerLisp for the
 <a href="https://makerlisp.com" target="_blank">MakerLisp</a> project.
 It runs as a soft CPU on Lattice MachXO FPGAs. This emulator lets you write,
 assemble, and step through COR24 code in your browser.</p>

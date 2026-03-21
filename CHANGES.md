@@ -2,7 +2,7 @@
 
 ## 2026-03-19
 
-- Apply Luther's assembly idiom feedback: add r0,-1 replaces lc+sub
+- Apply MakerLisp's assembly idiom feedback: add r0,-1 replaces lc+sub
   in countdown, fibonacci, multiply (saves 1-3 instructions each)
 - Echo example: add TX busy poll (cls/brt) before all UART writes
 - Feedback checklist: docs/feedback-checklist.md tracks all items
@@ -84,7 +84,7 @@
 - Add .comm directive and .byte fix to assembler
 - Migrate assembler examples to jal calling convention
 - Add instruction trace ring buffer and CLI --trace/--step modes
-- Document Luther Johnson's COR24 calling convention feedback
+- Document MakerLisp's COR24 calling convention feedback
 
 ## 2026-03-13
 

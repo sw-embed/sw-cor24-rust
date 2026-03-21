@@ -59,7 +59,7 @@ cor24-run --demo --speed 100000 --time 10
 ## cor24-dbg — Interactive debugger
 
 GDB-like command-line debugger with breakpoints, memory inspection,
-and UART I/O. Loads `.lgo` files (Luther Johnson's "load and go" format).
+and UART I/O. Loads `.lgo` files (MakerLisp's "load and go" format).
 
 ```bash
 cor24-dbg program.lgo
@@ -186,7 +186,7 @@ demo_fibonacci/
 | `.s` | Text | COR24 assembly source (as24-compatible) |
 | `.cor24.s` | Text | COR24 assembly from translator pipeline |
 | `.msp430.s` | Text | MSP430 assembly from rustc |
-| `.lgo` | Text | Luther's "load and go" monitor format |
+| `.lgo` | Text | MakerLisp's "load and go" monitor format |
 | `.rs` | Text | Rust source |
 
 There is no binary object file format. The assembler produces bytes

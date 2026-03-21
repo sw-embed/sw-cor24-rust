@@ -212,7 +212,7 @@ in memory and executes directly.
 ## Calling Convention
 
 The translator uses the `jal` (jump-and-link) calling convention, matching
-Luther Johnson's COR24 C compiler:
+MakerLisp's COR24 C compiler:
 
 | Aspect | Implementation |
 |--------|----------------|

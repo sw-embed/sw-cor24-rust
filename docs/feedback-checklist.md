@@ -1,6 +1,6 @@
 # Feedback Checklist
 
-Tracks feedback from Luther Johnson and how each item was addressed.
+Tracks feedback from MakerLisp and how each item was addressed.
 Sources: email feedback (docs/*.txt), meeting notes (docs/cor24-meet-notes-20260317.txt).
 
 ## Architecture Corrections (feedback1.txt, cor24-feedback.txt)
@@ -15,7 +15,7 @@ Sources: email feedback (docs/*.txt), meeting notes (docs/cor24-meet-notes-20260
 
 - [x] Refer to CPU as "MakerLisp COR24" (mention once) — in header and README
 - [x] Use "COR24" for subsequent references — throughout UI and docs
-- [ ] Luther review for compatibility — pending his review
+- [ ] MakerLisp review for compatibility — pending his review
 
 ## Hardware Corrections (research/feedback2b.txt)
 
@@ -64,7 +64,7 @@ Sources: email feedback (docs/*.txt), meeting notes (docs/cor24-meet-notes-20260
 
 ### `add r0,-1` instead of `lc r2,1; sub r0,r2` (meeting notes)
 
-Luther noted: use `add r2,-1` instead of loading a constant and subtracting.
+MakerLisp noted: use `add r2,-1` instead of loading a constant and subtracting.
 This saves one instruction and avoids clobbering another register.
 
 - [x] **countdown.s**: `lc r2,1; sub r0,r2` → `add r0,-1`
@@ -73,7 +73,7 @@ This saves one instruction and avoids clobbering another register.
 
 ### Pre-decrement counter pattern (meeting notes)
 
-Luther noted: "change counter-- to --counter" and "counter-- easier compare".
+MakerLisp noted: "change counter-- to --counter" and "counter-- easier compare".
 Pre-decrementing then testing is more idiomatic:
 ```
 ; Current (post-decrement style):
@@ -92,23 +92,23 @@ Pre-decrementing then testing is more idiomatic:
 
 ### Echo example TX busy check (meeting notes)
 
-Luther noted: "assembler example Echo also needs to check for TX busy"
+MakerLisp noted: "assembler example Echo also needs to check for TX busy"
 
 - [x] **echo.s**: added cls/brt TX busy poll before all three UART writes
   (prompt, uppercase echo, as-is echo)
 
 ### C fib example line 11 (meeting notes)
 
-Luther noted: "look at online, C, fib: line 11" — this is:
+MakerLisp noted: "look at online, C, fib: line 11" — this is:
 ```
     la      r0, _main
     jal     r1, (r0)
 ```
-- [ ] Review what Luther's concern was (possibly about using r0 vs r2 for call target)
+- [ ] Review what MakerLisp's concern was (possibly about using r0 vs r2 for call target)
 
 ### Button/LED inversion (meeting notes)
 
-Luther noted: "Blink example invert unnecessary, emulator sw/led one is wrong"
+MakerLisp noted: "Blink example invert unnecessary, emulator sw/led one is wrong"
 
 - [x] Emulator I/O verified correct: S2 pull-up (default high), D2 active-low
 - [x] Button Echo XOR inversion is correct (reads high=released, XOR→LED on when pressed)
@@ -117,7 +117,7 @@ Luther noted: "Blink example invert unnecessary, emulator sw/led one is wrong"
 
 ### Sidebar buttons too narrow (meeting notes)
 
-Luther noted: "buttons on left are not wide enough"
+MakerLisp noted: "buttons on left are not wide enough"
 
 - [ ] Review sidebar button width in CSS
 

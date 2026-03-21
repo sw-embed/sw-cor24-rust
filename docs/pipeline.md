@@ -23,18 +23,18 @@ halt:
 ```
 
 All `.s` examples are as24-compatible — they assemble with both our
-Rust assembler and Luther Johnson's reference `as24` assembler.
+Rust assembler and MakerLisp's reference `as24` assembler.
 
 ## 2. C Tab — View pre-compiled C examples
 
 ```
 C source (.c)  →  cc24 compiler  →  as24 assembler  →  COR24 assembly (.cor24.s)
-                  (Luther's toolchain, offline)
+                  (MakerLisp's toolchain, offline)
                                                            ↓
                                               Rust assembler  →  bytes  →  Emulator
 ```
 
-The C examples were compiled offline using Luther Johnson's `cc24` C
+The C examples were compiled offline using MakerLisp's `cc24` C
 compiler and `as24` assembler. The Web UI shows the resulting `.cor24.s`
 files. The wizard steps (Source → Compile → Assemble) are for
 visualization — the compilation already happened; clicking Compile

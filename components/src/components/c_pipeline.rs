@@ -62,7 +62,7 @@ impl CWizardStep {
 
     fn step_tooltip(&self) -> &'static str {
         match self {
-            CWizardStep::Source => "C source code (from Luther Johnson's cc24 compiler)",
+            CWizardStep::Source => "C source code (from MakerLisp's cc24 compiler)",
             CWizardStep::Compile => "COR24 assembly (compiler output + runtime stubs)",
             CWizardStep::Assemble => "Machine code execution and debug",
         }
@@ -316,7 +316,7 @@ pub fn c_pipeline(props: &CPipelineProps) -> Html {
                 }
 
                 <div class="pipeline-note">
-                    <em>{"Pipeline: C \u{2192} cc24 (Luther Johnson) \u{2192} COR24 ASM \u{2192} Machine Code. Examples are pre-built with injected runtime stubs."}</em>
+                    <em>{"Pipeline: C \u{2192} cc24 (MakerLisp) \u{2192} COR24 ASM \u{2192} Machine Code. Examples are pre-built with injected runtime stubs."}</em>
                 </div>
             </div>
         </div>

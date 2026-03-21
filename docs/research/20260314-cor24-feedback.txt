@@ -6,9 +6,9 @@ Using Gmail with screen readers
 FPGA question
 Inbox
 AI Overview
-You asked Luther if ICE40HX1K FPGA suits COR24 soft CPU; Luther advised UP5K is better fit, HX1K too small.
-Luther detailed iCE40 UP5K/CrossLink-NX boards and CPU porting work commitment.
-Luther provided detailed guidance on generic safe subroutine calling protocol using jal instruction.
+You asked MakerLisp if ICE40HX1K FPGA suits COR24 soft CPU; MakerLisp advised UP5K is better fit, HX1K too small.
+MakerLisp detailed iCE40 UP5K/CrossLink-NX boards and CPU porting work commitment.
+MakerLisp provided detailed guidance on generic safe subroutine calling protocol using jal instruction.
 By Gemini; there may be mistakes. Learn more
 
 Michael Wright
@@ -20,7 +20,7 @@ Michael Wright
 Mar 13, 2026, 5:43 PM (15 hours ago)
 forgot to add, I blogged about my poor man's rust to cor24 translator: > https://software-wrighter-lab.github.io/2026/03/13/rabbit-hole-rust-to-unsupported-isa/
 
-Luther Johnson
+MakerLisp
 Mar 13, 2026, 6:13 PM (14 hours ago)
 to me
 
@@ -82,7 +82,7 @@ I think if you follow this protocol, and then limit yourself to special register
 
 The register variations for jal were provided with this calling protocol in mind. There are three jal encodings, you can use (r0), (r1), or (r2) in the second argument, but the return address is always saved in r1.
 
-Luther Johnson
+MakerLisp
 Mar 13, 2026, 6:34 PM (14 hours ago)
 to me
 
@@ -93,7 +93,7 @@ Again, you can use any scheme you want, but I think the default scheme will save
 The easiest way to write assembly language is to write C code and compile it, then edit the result, if you want to tweak it. But you don't have my compiler yet. So for now I have to describe the protocol and show you examples.
 
 
-Luther Johnson
+MakerLisp
 Mar 13, 2026, 6:46 PM (14 hours ago)
 to me
 
