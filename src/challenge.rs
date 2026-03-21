@@ -148,6 +148,11 @@ pub fn get_examples() -> Vec<(String, String, String)> {
             "Write \"Hello\\n\" to UART output".into(),
             include_str!("examples/assembler/uart_hello.s").into(),
         ),
+        (
+            "Variables".into(),
+            "Copy \"Hello\" to SRAM, stack, and code — hover memory for ASCII".into(),
+            include_str!("examples/assembler/variables.s").into(),
+        ),
     ]
 }
 
@@ -312,6 +317,19 @@ fn check_expected(name: &str, cpu: &CpuState, inject_bad: bool) -> SelfTestResul
             let expected = if inject_bad { "WRONG\n" } else { "Hello\n" };
             checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
             checks.push(("UART", format!("{:?}", expected), format!("{:?}", &cpu.io.uart_output), cpu.io.uart_output == expected));
+        }
+        "Variables" => {
+            // "Hello" copied to SRAM at address 256
+            let expect_h: u8 = if inject_bad { 0 } else { 72 };
+            let v0 = cpu.read_byte(256);
+            let v1 = cpu.read_byte(257);
+            let v2 = cpu.read_byte(258);
+            let v3 = cpu.read_byte(259);
+            let v4 = cpu.read_byte(260);
+            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
+            checks.push(("mem[256..260]", format!("{}", if inject_bad { "WRONG" } else { "Hello" }),
+                format!("{}", String::from_utf8_lossy(&[v0, v1, v2, v3, v4])),
+                v0 == expect_h && v1 == 101 && v2 == 108 && v3 == 108 && v4 == 111));
         }
         _ => {
             checks.push(("defined", "true".into(), "false".into(), false));
