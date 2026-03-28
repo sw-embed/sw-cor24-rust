@@ -64,6 +64,7 @@ fn print_short_help() {
     println!("  --patch <addr>=<value> Write 24-bit value to memory (repeatable)");
     println!("  --base-addr <addr>     Base address for assembly (default: 0)");
     println!("  --stack-kilobytes <3|8>  EBR stack size (default: 3, max: 8)");
+    println!("  --switch <on|off>      Set button S2 state (default: off/released)");
     println!("  --uart-never-ready     UART TX stays busy forever (test polling)");
     println!();
     println!("Examples:");
@@ -291,6 +292,7 @@ struct CliArgs {
     load_binaries: Vec<(String, u32)>, // (file_path, load_address) pairs
     patches: Vec<(u32, u32)>,           // (address, 24-bit value) pairs
     base_addr: u32,                     // base address for assembly (--base-addr)
+    switch_pressed: bool,               // button S2 state (--switch on)
 }
 
 /// Parse a numeric address string: 0x prefix, h suffix, or decimal.
@@ -324,6 +326,7 @@ fn parse_args() -> CliArgs {
         load_binaries: Vec::new(),
         patches: Vec::new(),
         base_addr: 0,
+        switch_pressed: false,
     };
 
     let mut i = 1;
@@ -406,6 +409,19 @@ fn parse_args() -> CliArgs {
             }
             "--step" => {
                 cli.step = true;
+            }
+            "--switch" => {
+                if i + 1 < args.len() {
+                    match args[i + 1].to_lowercase().as_str() {
+                        "on" | "pressed" | "1" => cli.switch_pressed = true,
+                        "off" | "released" | "0" => cli.switch_pressed = false,
+                        _ => {
+                            eprintln!("Error: --switch must be on or off");
+                            std::process::exit(1);
+                        }
+                    }
+                    i += 1;
+                }
             }
             "--uart-never-ready" => {
                 cli.uart_never_ready = true;
@@ -557,16 +573,15 @@ fn print_io_state(emu: &EmulatorCore) {
     println!("\n=== I/O FF0000-FFFFFF (64 KB, memory-mapped peripherals) ===");
 
     // LED/Switch at 0xFF0000
-    // Note: read_byte(0xFF0000) returns switch state; LED state is separate
+    // LED state is internal (written by sb to FF0000), not readable via lb
+    // Switch state is what lb from FF0000 returns (active-low: 0=pressed, 1=released)
     let led = snap.led;
-    let btn = snap.button;
-    print!("  FF0000 LED:  0x{:02X}  [", led);
-    for i in (0..8).rev() {
-        if (led >> i) & 1 == 1 { print!("*"); } else { print!("."); }
-    }
-    print!("]  BTN S2: ");
-    // button field: normally high (1=released), 0=pressed
-    println!("{}", if btn & 1 == 0 { "PRESSED" } else { "released" });
+    let switch = snap.button;
+    print!("  LED D2:  0x{:02X}  ", led);
+    if led & 1 == 1 { print!("ON"); } else { print!("off"); }
+    println!();
+    print!("  BTN S2:  0x{:02X}  ", switch);
+    println!("{}", if switch & 1 == 0 { "PRESSED (active-low)" } else { "released" });
 
     // Interrupt enable at 0xFF0010
     let ie = emu.read_byte(0xFF0010);
@@ -1029,6 +1044,9 @@ fn main() {
             if cli.uart_never_ready {
                 emu.set_uart_never_ready(true);
             }
+            if cli.switch_pressed {
+                emu.set_button_pressed(true);
+            }
             // Set stack size: 3 KB → SP=0xFEEC00 (default), 8 KB → SP=0xFF0000
             if cli.stack_kb == 8 {
                 emu.set_reg(4, 0xFF0000); // SP = top of full EBR window
@@ -1156,6 +1174,9 @@ fn main() {
             let mut emu = EmulatorCore::new();
             if cli.uart_never_ready {
                 emu.set_uart_never_ready(true);
+            }
+            if cli.switch_pressed {
+                emu.set_button_pressed(true);
             }
             if cli.stack_kb == 8 {
                 emu.set_reg(4, 0xFF0000);
