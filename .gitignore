@@ -15,3 +15,12 @@ docs/research/asld24/longlgo
 
 # Binary spreadsheets
 *.xlsx
+
+# Agent session artifacts
+.agentrail/
+.playwright-cli/
+
+# Scratch files
+fib.cor24.lst
+s-files/
+ttc/
