@@ -8,6 +8,8 @@ pub mod encode;
 pub mod opcode;
 pub mod register;
 
-pub use branch::{BRANCH_OFFSET_MAX, BRANCH_OFFSET_MIN, BRANCH_PIPELINE_DELAY, MAX_INSTRUCTION_BYTES};
+pub use branch::{
+    BRANCH_OFFSET_MAX, BRANCH_OFFSET_MIN, BRANCH_PIPELINE_DELAY, MAX_INSTRUCTION_BYTES,
+};
 pub use opcode::{DecodedInstruction, InstructionFormat, Opcode};
 pub use register::{REG_NAMES, reg_name};

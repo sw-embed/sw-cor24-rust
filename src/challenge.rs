@@ -1,8 +1,8 @@
 //! Challenge system and self-test for COR24 emulator
 
 use crate::assembler::Assembler;
-use crate::cpu::executor::Executor;
 use crate::cpu::CpuState;
+use crate::cpu::executor::Executor;
 
 /// A challenge for the user to complete
 #[derive(Clone)]
@@ -235,88 +235,231 @@ fn check_expected(name: &str, cpu: &CpuState, inject_bad: bool) -> SelfTestResul
         "Add" => {
             let val = cpu.read_byte(256);
             let expect_val: u8 = if inject_bad { 0xFF } else { 0x56 };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("mem[256]", format!("0x{:02X}", expect_val), format!("0x{:02X}", val), val == expect_val));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "mem[256]",
+                format!("0x{:02X}", expect_val),
+                format!("0x{:02X}", val),
+                val == expect_val,
+            ));
         }
         "Assert" => {
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
         }
         "Blink LED" => {
             let expect_running = !expect_run;
-            checks.push(("running", format!("{}", expect_running), format!("{}", !cpu.halted), cpu.halted != expect_running));
+            checks.push((
+                "running",
+                format!("{}", expect_running),
+                format!("{}", !cpu.halted),
+                cpu.halted != expect_running,
+            ));
             let min = if inject_bad { 99999 } else { 10 };
-            checks.push(("instructions", format!(">{}", min), format!("{}", cpu.instructions), cpu.instructions > min as u64));
+            checks.push((
+                "instructions",
+                format!(">{}", min),
+                format!("{}", cpu.instructions),
+                cpu.instructions > min as u64,
+            ));
         }
         "Button Echo" => {
             let led = cpu.io.leds & 1;
             let expect_running = !expect_run;
             let expect_led: u8 = if inject_bad { 0 } else { 1 };
-            checks.push(("running", format!("{}", expect_running), format!("{}", !cpu.halted), cpu.halted != expect_running));
-            checks.push(("LED (S2 pressed)", format!("{}", expect_led), format!("{}", led), led == expect_led));
+            checks.push((
+                "running",
+                format!("{}", expect_running),
+                format!("{}", !cpu.halted),
+                cpu.halted != expect_running,
+            ));
+            checks.push((
+                "LED (S2 pressed)",
+                format!("{}", expect_led),
+                format!("{}", led),
+                led == expect_led,
+            ));
         }
         "Comments" => {
             let r0 = cpu.get_reg(0);
             let expect_r0: u32 = if inject_bad { 999 } else { 300 };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("r0", format!("{}", expect_r0), format!("{}", r0), r0 == expect_r0));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "r0",
+                format!("{}", expect_r0),
+                format!("{}", r0),
+                r0 == expect_r0,
+            ));
         }
         "Countdown" => {
             let val = cpu.read_byte(256);
             let expect_val: u8 = if inject_bad { 99 } else { 0 };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("mem[256]", format!("{}", expect_val), format!("{}", val), val == expect_val));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "mem[256]",
+                format!("{}", expect_val),
+                format!("{}", val),
+                val == expect_val,
+            ));
         }
         "Echo" => {
             let expect_char = if inject_bad { 'Z' } else { 'A' };
             let has_char = cpu.io.uart_output.contains(expect_char);
             let expect_running = !expect_run;
-            let label = if inject_bad { "UART has 'Z'" } else { "UART has 'A'" };
-            checks.push(("running", format!("{}", expect_running), format!("{}", !cpu.halted), cpu.halted != expect_running));
-            checks.push((label, "true".into(), format!("{} ({:?})", has_char, &cpu.io.uart_output), has_char));
+            let label = if inject_bad {
+                "UART has 'Z'"
+            } else {
+                "UART has 'A'"
+            };
+            checks.push((
+                "running",
+                format!("{}", expect_running),
+                format!("{}", !cpu.halted),
+                cpu.halted != expect_running,
+            ));
+            checks.push((
+                label,
+                "true".into(),
+                format!("{} ({:?})", has_char, &cpu.io.uart_output),
+                has_char,
+            ));
         }
         "Fibonacci" => {
-            let expected = if inject_bad { "WRONG\n" } else { "1 1 2 3 5 8 13 21 34 55\n" };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("UART", format!("{:?}", expected), format!("{:?}", &cpu.io.uart_output), cpu.io.uart_output == expected));
+            let expected = if inject_bad {
+                "WRONG\n"
+            } else {
+                "1 1 2 3 5 8 13 21 34 55\n"
+            };
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "UART",
+                format!("{:?}", expected),
+                format!("{:?}", &cpu.io.uart_output),
+                cpu.io.uart_output == expected,
+            ));
         }
         "Literals" => {
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
         }
         "Loop Trace" => {
             let expect_running = !expect_run;
             let min = if inject_bad { 99999 } else { 10 };
-            checks.push(("running", format!("{}", expect_running), format!("{}", !cpu.halted), cpu.halted != expect_running));
-            checks.push(("instructions", format!(">{}", min), format!("{}", cpu.instructions), cpu.instructions > min as u64));
+            checks.push((
+                "running",
+                format!("{}", expect_running),
+                format!("{}", !cpu.halted),
+                cpu.halted != expect_running,
+            ));
+            checks.push((
+                "instructions",
+                format!(">{}", min),
+                format!("{}", cpu.instructions),
+                cpu.instructions > min as u64,
+            ));
         }
         "Memory Access" => {
             let v1 = cpu.read_byte(256);
             let v2 = cpu.read_byte(512);
             let (e1, e2): (u8, u8) = if inject_bad { (99, 99) } else { (42, 200) };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
             checks.push(("mem[256]", format!("{}", e1), format!("{}", v1), v1 == e1));
             checks.push(("mem[512]", format!("{}", e2), format!("{}", v2), v2 == e2));
         }
         "Multiply" => {
             let expected = if inject_bad { "WRONG\n" } else { "42 42\n" };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("UART", format!("{:?}", expected), format!("{:?}", &cpu.io.uart_output), cpu.io.uart_output == expected));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "UART",
+                format!("{:?}", expected),
+                format!("{:?}", &cpu.io.uart_output),
+                cpu.io.uart_output == expected,
+            ));
         }
         "Nested Calls" => {
             let r0 = cpu.get_reg(0);
             let expect_r0: u32 = if inject_bad { 999 } else { 33 };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("r0", format!("{}", expect_r0), format!("{}", r0), r0 == expect_r0));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "r0",
+                format!("{}", expect_r0),
+                format!("{}", r0),
+                r0 == expect_r0,
+            ));
         }
         "Stack Variables" => {
             let val = cpu.read_byte(256);
             let expect_val: u8 = if inject_bad { 99 } else { 16 };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("mem[256]", format!("{}", expect_val), format!("{}", val), val == expect_val));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "mem[256]",
+                format!("{}", expect_val),
+                format!("{}", val),
+                val == expect_val,
+            ));
         }
         "UART Hello" => {
             let expected = if inject_bad { "WRONG\n" } else { "Hello\n" };
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("UART", format!("{:?}", expected), format!("{:?}", &cpu.io.uart_output), cpu.io.uart_output == expected));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "UART",
+                format!("{:?}", expected),
+                format!("{:?}", &cpu.io.uart_output),
+                cpu.io.uart_output == expected,
+            ));
         }
         "Variables" => {
             // "Hello World!" copied to SRAM at addresses 256 and 512
@@ -325,9 +468,24 @@ fn check_expected(name: &str, cpu: &CpuState, inject_bad: bool) -> SelfTestResul
             let copy2: Vec<u8> = (0..12).map(|i| cpu.read_byte(512 + i)).collect();
             let actual1 = String::from_utf8_lossy(&copy1).to_string();
             let actual2 = String::from_utf8_lossy(&copy2).to_string();
-            checks.push(("halted", format!("{}", expect_halt), format!("{}", cpu.halted), cpu.halted == expect_halt));
-            checks.push(("mem[256]", expected.to_string(), actual1.clone(), actual1 == expected));
-            checks.push(("mem[512]", expected.to_string(), actual2.clone(), actual2 == expected));
+            checks.push((
+                "halted",
+                format!("{}", expect_halt),
+                format!("{}", cpu.halted),
+                cpu.halted == expect_halt,
+            ));
+            checks.push((
+                "mem[256]",
+                expected.to_string(),
+                actual1.clone(),
+                actual1 == expected,
+            ));
+            checks.push((
+                "mem[512]",
+                expected.to_string(),
+                actual2.clone(),
+                actual2 == expected,
+            ));
         }
         _ => {
             checks.push(("defined", "true".into(), "false".into(), false));
@@ -335,7 +493,8 @@ fn check_expected(name: &str, cpu: &CpuState, inject_bad: bool) -> SelfTestResul
     }
 
     let pass = checks.iter().all(|c| c.3);
-    let detail = checks.iter()
+    let detail = checks
+        .iter()
         .map(|(label, expected, actual, ok)| {
             if *ok {
                 format!("{}: {}", label, actual)

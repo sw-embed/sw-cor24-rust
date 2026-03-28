@@ -432,7 +432,7 @@ impl EmulatorCore {
     /// Disassemble one instruction at the given address.
     /// Returns (mnemonic_string, instruction_size_in_bytes).
     pub fn disassemble_at(&self, addr: u32) -> (String, u32) {
-        use crate::cpu::instruction::{reg_name, InstructionFormat};
+        use crate::cpu::instruction::{InstructionFormat, reg_name};
 
         let inst_byte = self.cpu.read_byte(addr);
         let decoded = self.decode_rom.decode(inst_byte);
@@ -474,13 +474,10 @@ impl EmulatorCore {
                 match inst.opcode {
                     Opcode::Bra | Opcode::Brf | Opcode::Brt => {
                         let branch_base = addr.wrapping_add(4);
-                        let target =
-                            CpuState::mask_24(branch_base.wrapping_add(CpuState::sign_extend_8(imm)));
-                        format!(
-                            "{:4} 0x{:06X}",
-                            inst.opcode.mnemonic(),
-                            target
-                        )
+                        let target = CpuState::mask_24(
+                            branch_base.wrapping_add(CpuState::sign_extend_8(imm)),
+                        );
+                        format!("{:4} 0x{:06X}", inst.opcode.mnemonic(), target)
                     }
                     Opcode::Lc | Opcode::Lcu | Opcode::AddImm => {
                         format!(
@@ -644,9 +641,10 @@ mod tests {
 
     #[test]
     fn test_load_sieve_and_run() {
-        let lgo = std::fs::read_to_string(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/docs/research/asld24/sieve.lgo"),
-        )
+        let lgo = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/docs/research/asld24/sieve.lgo"
+        ))
         .expect("sieve.lgo must exist");
 
         let mut emu = EmulatorCore::new();
@@ -667,7 +665,7 @@ mod tests {
         emu.write_byte(0, 0x80); // push fp
         emu.write_byte(1, 0x65); // mov fp,sp
         emu.write_byte(2, 0x44); // lc r0
-        emu.write_byte(3, 42);   // value 42
+        emu.write_byte(3, 42); // value 42
 
         let lines = emu.disassemble(0, 3);
         assert_eq!(lines.len(), 3);
@@ -697,9 +695,14 @@ mod tests {
 
         fn run_tick(emu: &mut EmulatorCore, steps: u32) {
             for _ in 0..steps {
-                if emu.is_halted() { break; }
+                if emu.is_halted() {
+                    break;
+                }
                 let r = emu.step();
-                if matches!(r.reason, StopReason::Halted | StopReason::InvalidInstruction(_)) {
+                if matches!(
+                    r.reason,
+                    StopReason::Halted | StopReason::InvalidInstruction(_)
+                ) {
                     break;
                 }
             }
@@ -752,9 +755,14 @@ mod tests {
 
         fn run_tick(emu: &mut EmulatorCore, steps: u32) {
             for _ in 0..steps {
-                if emu.is_halted() { break; }
+                if emu.is_halted() {
+                    break;
+                }
                 let r = emu.step();
-                if matches!(r.reason, StopReason::Halted | StopReason::InvalidInstruction(_)) {
+                if matches!(
+                    r.reason,
+                    StopReason::Halted | StopReason::InvalidInstruction(_)
+                ) {
                     break;
                 }
             }
@@ -785,7 +793,11 @@ mod tests {
         let source = include_str!("examples/rust_pipeline/demo_echo.cor24.s");
         let mut asm = Assembler::new();
         let result = asm.assemble(source);
-        assert!(result.errors.is_empty(), "Assembly errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Assembly errors: {:?}",
+            result.errors
+        );
 
         let mut emu = EmulatorCore::new();
         for (addr, &byte) in result.bytes.iter().enumerate() {
@@ -795,9 +807,14 @@ mod tests {
 
         fn run_tick(emu: &mut EmulatorCore, steps: u32) {
             for _ in 0..steps {
-                if emu.is_halted() { break; }
+                if emu.is_halted() {
+                    break;
+                }
                 let r = emu.step();
-                if matches!(r.reason, StopReason::Halted | StopReason::InvalidInstruction(_)) {
+                if matches!(
+                    r.reason,
+                    StopReason::Halted | StopReason::InvalidInstruction(_)
+                ) {
                     break;
                 }
             }

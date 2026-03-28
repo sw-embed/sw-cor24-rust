@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
@@ -22,11 +22,13 @@ pub fn modal(props: &ModalProps) -> Html {
         use_effect_with(active, move |&active| {
             let cleanup: Option<JsValue> = if active {
                 let document = web_sys::window().unwrap().document().unwrap();
-                let closure = Closure::<dyn Fn(web_sys::KeyboardEvent)>::new(move |e: web_sys::KeyboardEvent| {
-                    if e.key() == "Escape" {
-                        on_close.emit(());
-                    }
-                });
+                let closure = Closure::<dyn Fn(web_sys::KeyboardEvent)>::new(
+                    move |e: web_sys::KeyboardEvent| {
+                        if e.key() == "Escape" {
+                            on_close.emit(());
+                        }
+                    },
+                );
                 document
                     .add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())
                     .ok();

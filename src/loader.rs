@@ -54,8 +54,7 @@ pub fn parse_lgo_go_line(line: &str) -> Result<u32, String> {
     }
 
     let addr_str = &line[1..7];
-    u32::from_str_radix(addr_str, 16)
-        .map_err(|e| format!("Bad address '{}': {}", addr_str, e))
+    u32::from_str_radix(addr_str, 16).map_err(|e| format!("Bad address '{}': {}", addr_str, e))
 }
 
 /// Load an LGO file into CPU memory
@@ -85,15 +84,18 @@ pub fn load_lgo(content: &str, cpu: &mut CpuState) -> Result<LoadResult, String>
             }
             Some('G') => {
                 start_addr = Some(
-                    parse_lgo_go_line(line)
-                        .map_err(|e| format!("Line {}: {}", line_num + 1, e))?,
+                    parse_lgo_go_line(line).map_err(|e| format!("Line {}: {}", line_num + 1, e))?,
                 );
             }
             Some(';') | Some('#') => {
                 // Comment line, skip
             }
             _ => {
-                return Err(format!("Line {}: Unknown line type: '{}'", line_num + 1, line));
+                return Err(format!(
+                    "Line {}: Unknown line type: '{}'",
+                    line_num + 1,
+                    line
+                ));
             }
         }
     }
@@ -126,7 +128,8 @@ mod tests {
     #[test]
     fn test_parse_lgo_load_line_long() {
         // First line of sieve.lgo
-        let line = "L000000807F7E652B0001FF2E0145020DCE14F62E01CB15F92F098200697A7B7C27807F7E650CF7";
+        let line =
+            "L000000807F7E652B0001FF2E0145020DCE14F62E01CB15F92F098200697A7B7C27807F7E650CF7";
         let (addr, bytes) = parse_lgo_load_line(line).unwrap();
         assert_eq!(addr, 0x000000);
         assert_eq!(bytes[0], 0x80); // push fp
@@ -190,25 +193,38 @@ mod tests {
 
     #[test]
     fn test_load_sieve_lgo() {
-        let lgo = std::fs::read_to_string(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/docs/research/asld24/sieve.lgo"),
-        )
+        let lgo = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/docs/research/asld24/sieve.lgo"
+        ))
         .expect("sieve.lgo must exist");
 
         let mut cpu = CpuState::new();
         let result = load_lgo(&lgo, &mut cpu).unwrap();
 
         // First instruction: push fp = 0x80
-        assert_eq!(cpu.read_byte(0x000000), 0x80, "First byte should be push fp");
+        assert_eq!(
+            cpu.read_byte(0x000000),
+            0x80,
+            "First byte should be push fp"
+        );
 
         // _main entry at 0x93: push fp = 0x80
-        assert_eq!(cpu.read_byte(0x000093), 0x80, "_main should start with push fp");
+        assert_eq!(
+            cpu.read_byte(0x000093),
+            0x80,
+            "_main should start with push fp"
+        );
 
         // Data section: "1000 iterations\n" at 0x213E
         assert_eq!(cpu.read_byte(0x00213E), 0x31, "Data '1' at 0x213E");
         assert_eq!(cpu.read_byte(0x00213F), 0x30, "Data '0' at 0x213F");
 
         // Should have loaded a good chunk of bytes
-        assert!(result.bytes_loaded > 300, "Should load >300 bytes, got {}", result.bytes_loaded);
+        assert!(
+            result.bytes_loaded > 300,
+            "Should load >300 bytes, got {}",
+            result.bytes_loaded
+        );
     }
 }

@@ -52,11 +52,17 @@ fn test_count_down() {
 #[test]
 fn test_hello_world() {
     let cpu = load_and_run(
-        concat!(env!("CARGO_MANIFEST_DIR"), "/tests/programs/hello_world.lgo"),
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/programs/hello_world.lgo"
+        ),
         0,
         1000,
     );
-    assert_eq!(cpu.io.uart_output, "Hello, World!\n", "Should print 'Hello, World!\\n'");
+    assert_eq!(
+        cpu.io.uart_output, "Hello, World!\n",
+        "Should print 'Hello, World!\\n'"
+    );
 }
 
 #[test]
@@ -72,7 +78,10 @@ fn test_led_blink() {
 #[test]
 fn test_sieve() {
     let cpu = load_and_run(
-        concat!(env!("CARGO_MANIFEST_DIR"), "/docs/research/asld24/sieve.lgo"),
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/docs/research/asld24/sieve.lgo"
+        ),
         0x93, // _main entry point
         1_000_000,
     );
@@ -103,9 +112,16 @@ fn test_all_examples_assemble() {
 fn test_fibonacci_example() {
     let mut assembler = Assembler::new();
     let examples = get_examples();
-    let fib = examples.iter().find(|(name, _, _)| name == "Fibonacci").unwrap();
+    let fib = examples
+        .iter()
+        .find(|(name, _, _)| name == "Fibonacci")
+        .unwrap();
     let result = assembler.assemble(&fib.2);
-    assert!(result.errors.is_empty(), "Fibonacci assembly errors: {:?}", result.errors);
+    assert!(
+        result.errors.is_empty(),
+        "Fibonacci assembly errors: {:?}",
+        result.errors
+    );
     let mut cpu = CpuState::new();
     for (addr, byte) in result.bytes.iter().enumerate() {
         cpu.memory[addr] = *byte;
@@ -124,9 +140,16 @@ fn test_fibonacci_example() {
 fn test_multiply_example() {
     let mut assembler = Assembler::new();
     let examples = get_examples();
-    let mul = examples.iter().find(|(name, _, _)| name == "Multiply").unwrap();
+    let mul = examples
+        .iter()
+        .find(|(name, _, _)| name == "Multiply")
+        .unwrap();
     let result = assembler.assemble(&mul.2);
-    assert!(result.errors.is_empty(), "Multiply assembly errors: {:?}", result.errors);
+    assert!(
+        result.errors.is_empty(),
+        "Multiply assembly errors: {:?}",
+        result.errors
+    );
     let mut cpu = CpuState::new();
     for (addr, byte) in result.bytes.iter().enumerate() {
         cpu.memory[addr] = *byte;
@@ -134,7 +157,10 @@ fn test_multiply_example() {
     cpu.pc = 0;
     let executor = Executor::new();
     executor.run(&mut cpu, 10_000);
-    assert_eq!(cpu.io.uart_output, "42 42\n", "Multiply should print '42 42\\n'");
+    assert_eq!(
+        cpu.io.uart_output, "42 42\n",
+        "Multiply should print '42 42\\n'"
+    );
 }
 
 /// Helper: assemble source, run, and return CPU state.
@@ -142,7 +168,11 @@ fn test_multiply_example() {
 fn assemble_and_run(source: &str, max_cycles: u64) -> CpuState {
     let mut assembler = Assembler::new();
     let result = assembler.assemble(source);
-    assert!(result.errors.is_empty(), "Assembly errors: {:?}", result.errors);
+    assert!(
+        result.errors.is_empty(),
+        "Assembly errors: {:?}",
+        result.errors
+    );
     let mut cpu = CpuState::new();
     cpu.io.uart_tx_busy_cycles = 0; // legacy: instant TX for tests that don't poll
     for (addr, byte) in result.bytes.iter().enumerate() {
@@ -210,7 +240,10 @@ fn test_step_halted_cpu_is_noop() {
 #[test]
 fn test_memory_access_non_adjacent() {
     let examples = get_examples();
-    let mem = examples.iter().find(|(name, _, _)| name == "Memory Access").unwrap();
+    let mem = examples
+        .iter()
+        .find(|(name, _, _)| name == "Memory Access")
+        .unwrap();
     let cpu = assemble_and_run(&mem.2, 1000);
     assert!(cpu.halted, "Memory Access should halt");
     // Check first block at 0x0100
@@ -219,7 +252,11 @@ fn test_memory_access_non_adjacent() {
     // Check second block at 0x0200
     assert_eq!(cpu.read_byte(0x0200), 200, "Block 2: byte 0 should be 200");
     // Gap between blocks should be zero
-    assert_eq!(cpu.read_byte(0x0150), 0, "Gap between blocks should be zero");
+    assert_eq!(
+        cpu.read_byte(0x0150),
+        0,
+        "Gap between blocks should be zero"
+    );
 }
 
 /// Test that UART Hello example with TX busy polling assembles and runs correctly
@@ -227,9 +264,16 @@ fn test_memory_access_non_adjacent() {
 fn test_uart_hello_example() {
     let mut assembler = Assembler::new();
     let examples = get_examples();
-    let uart = examples.iter().find(|(name, _, _)| name == "UART Hello").unwrap();
+    let uart = examples
+        .iter()
+        .find(|(name, _, _)| name == "UART Hello")
+        .unwrap();
     let result = assembler.assemble(&uart.2);
-    assert!(result.errors.is_empty(), "UART Hello assembly errors: {:?}", result.errors);
+    assert!(
+        result.errors.is_empty(),
+        "UART Hello assembly errors: {:?}",
+        result.errors
+    );
     let mut cpu = CpuState::new();
     for (addr, byte) in result.bytes.iter().enumerate() {
         cpu.memory[addr] = *byte;
@@ -237,7 +281,10 @@ fn test_uart_hello_example() {
     cpu.pc = 0;
     let executor = Executor::new();
     executor.run(&mut cpu, 10_000);
-    assert_eq!(cpu.io.uart_output, "Hello\n", "UART Hello should output 'Hello\\n'");
+    assert_eq!(
+        cpu.io.uart_output, "Hello\n",
+        "UART Hello should output 'Hello\\n'"
+    );
 }
 
 /// OOM example fills SRAM with 256-byte stride then halts
@@ -262,10 +309,18 @@ fn test_stack_overflow_example() {
     assert!(cpu.halted, "Stack overflow should halt when EBR exhausted");
     // SP should be at or below EBR base (0xFEE000)
     let sp = cpu.get_reg(4);
-    assert!(sp <= 0xFEE000, "SP should be at or below EBR base, got 0x{:06X}", sp);
+    assert!(
+        sp <= 0xFEE000,
+        "SP should be at or below EBR base, got 0x{:06X}",
+        sp
+    );
     // First push writes at 0xFEEBFD (SP-3 from initial 0xFEEC00)
     // Depth 0 is pushed, so word value is 0 — check second push pair (depth=1 at offset -12)
-    assert_ne!(cpu.read_word(0xFEEBF1), 0, "Stack should have recursion data");
+    assert_ne!(
+        cpu.read_word(0xFEEBF1),
+        0,
+        "Stack should have recursion data"
+    );
 }
 
 /// Interrupt example: send UART bytes, verify ISR prints counter digits
@@ -274,7 +329,11 @@ fn test_interrupt_example() {
     let source = include_str!("../docs/examples/interrupt.s");
     let mut assembler = Assembler::new();
     let result = assembler.assemble(source);
-    assert!(result.errors.is_empty(), "Interrupt assembly errors: {:?}", result.errors);
+    assert!(
+        result.errors.is_empty(),
+        "Interrupt assembly errors: {:?}",
+        result.errors
+    );
 
     let mut cpu = CpuState::new();
     for (addr, byte) in result.bytes.iter().enumerate() {
@@ -292,14 +351,25 @@ fn test_interrupt_example() {
     executor.run(&mut cpu, 1000);
 
     // ISR should have printed a digit (0-9) to UART
-    assert!(!cpu.io.uart_output.is_empty(), "ISR should have output a digit");
+    assert!(
+        !cpu.io.uart_output.is_empty(),
+        "ISR should have output a digit"
+    );
     let first_char = cpu.io.uart_output.chars().next().unwrap();
-    assert!(first_char.is_ascii_digit(), "Output should be ASCII digit, got '{}'", first_char);
+    assert!(
+        first_char.is_ascii_digit(),
+        "Output should be ASCII digit, got '{}'",
+        first_char
+    );
 
     // Send another byte, should get another digit
     cpu.uart_send_rx(b'y');
     executor.run(&mut cpu, 1000);
-    assert_eq!(cpu.io.uart_output.len(), 2, "Should have two digits after two interrupts");
+    assert_eq!(
+        cpu.io.uart_output.len(),
+        2,
+        "Should have two digits after two interrupts"
+    );
 }
 
 /// Echo example: letters→uppercase, !→halt, others echo as-is
@@ -308,7 +378,11 @@ fn test_echo_example() {
     let source = include_str!("../src/examples/assembler/echo.s");
     let mut assembler = Assembler::new();
     let result = assembler.assemble(source);
-    assert!(result.errors.is_empty(), "Echo assembly errors: {:?}", result.errors);
+    assert!(
+        result.errors.is_empty(),
+        "Echo assembly errors: {:?}",
+        result.errors
+    );
 
     let mut cpu = CpuState::new();
     for (addr, byte) in result.bytes.iter().enumerate() {
@@ -319,7 +393,10 @@ fn test_echo_example() {
 
     // Run to reach idle loop — prompt '?' should appear
     executor.run(&mut cpu, 100);
-    assert_eq!(cpu.io.uart_output, "?", "Prompt '?' should appear on startup");
+    assert_eq!(
+        cpu.io.uart_output, "?",
+        "Prompt '?' should appear on startup"
+    );
 
     // Send 'a' → uppercase 'A'
     cpu.uart_send_rx(b'a');
@@ -372,7 +449,10 @@ halt:
     let executor = Executor::new();
     executor.run(&mut cpu, 10_000);
     // Only first character should get through — B and C written while busy
-    assert_eq!(cpu.io.uart_output, "A", "Only 'A' should transmit; B,C dropped while busy");
+    assert_eq!(
+        cpu.io.uart_output, "A",
+        "Only 'A' should transmit; B,C dropped while busy"
+    );
     assert_eq!(cpu.io.uart_tx_dropped, 2, "B and C should be dropped");
 }
 
@@ -414,7 +494,10 @@ halt:
     cpu.pc = 0;
     let executor = Executor::new();
     executor.run(&mut cpu, 10_000);
-    assert_eq!(cpu.io.uart_output, "ABC", "All characters should transmit with polling");
+    assert_eq!(
+        cpu.io.uart_output, "ABC",
+        "All characters should transmit with polling"
+    );
     assert_eq!(cpu.io.uart_tx_dropped, 0, "No characters should be dropped");
 }
 

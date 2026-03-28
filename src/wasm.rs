@@ -126,7 +126,11 @@ impl WasmCpu {
     pub fn run_batch(&mut self, max_instructions: u32) -> bool {
         self.emu.resume();
         let result = self.emu.run_batch(max_instructions as u64);
-        !matches!(result.reason, crate::emulator::StopReason::Halted | crate::emulator::StopReason::InvalidInstruction(_))
+        !matches!(
+            result.reason,
+            crate::emulator::StopReason::Halted
+                | crate::emulator::StopReason::InvalidInstruction(_)
+        )
     }
 
     /// Run until halt or error
@@ -263,7 +267,12 @@ impl WasmCpu {
 
     /// Get the last N trace entries as formatted strings
     pub fn get_trace_lines(&self, n: usize) -> Vec<String> {
-        self.emu.trace().last_n(n).iter().map(|e| format!("{}", e)).collect()
+        self.emu
+            .trace()
+            .last_n(n)
+            .iter()
+            .map(|e| format!("{}", e))
+            .collect()
     }
 
     /// Get the end address of loaded program (highest address written)
@@ -340,10 +349,17 @@ pub fn validate_challenge(challenge_id: usize, source: &str) -> Result<bool, JsV
 #[wasm_bindgen]
 pub fn run_self_tests(inject_failure: bool) -> String {
     let results = crate::challenge::run_self_tests(inject_failure);
-    let json: Vec<String> = results.iter().map(|r| {
-        format!(r#"{{"name":"{}","pass":{},"detail":"{}"}}"#,
-            r.name, r.pass, r.detail.replace('"', "'"))
-    }).collect();
+    let json: Vec<String> = results
+        .iter()
+        .map(|r| {
+            format!(
+                r#"{{"name":"{}","pass":{},"detail":"{}"}}"#,
+                r.name,
+                r.pass,
+                r.detail.replace('"', "'")
+            )
+        })
+        .collect();
     format!("[{}]", json.join(","))
 }
 

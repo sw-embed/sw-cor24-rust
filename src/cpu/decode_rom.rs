@@ -62,7 +62,11 @@ mod tests {
     #[test]
     fn test_valid_entry_count() {
         let valid = DECODE_ROM.iter().filter(|&&v| v != 0xFFF).count();
-        assert_eq!(valid, VALID_ENTRY_COUNT, "Expected {} valid entries", VALID_ENTRY_COUNT);
+        assert_eq!(
+            valid, VALID_ENTRY_COUNT,
+            "Expected {} valid entries",
+            VALID_ENTRY_COUNT
+        );
     }
 
     #[test]

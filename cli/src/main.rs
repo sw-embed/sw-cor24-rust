@@ -72,8 +72,8 @@ impl Debugger {
     }
 
     fn load_file(&mut self, path: &str, entry: Option<u32>) -> Result<(), String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("Cannot read file: {}", e))?;
+        let content =
+            std::fs::read_to_string(path).map_err(|e| format!("Cannot read file: {}", e))?;
 
         let bytes = self.emu.load_lgo(&content, entry)?;
         self.loaded = true;
@@ -174,19 +174,27 @@ impl Debugger {
 
         match result.reason {
             StopReason::Halted => {
-                println!("\nCPU halted after {} instructions", result.instructions_run);
+                println!(
+                    "\nCPU halted after {} instructions",
+                    result.instructions_run
+                );
                 self.cmd_trace("10");
             }
             StopReason::Breakpoint(addr) => {
                 println!("Breakpoint at 0x{:06X}", addr);
             }
             StopReason::InvalidInstruction(byte) => {
-                println!("\nInvalid instruction 0x{:02X} after {} instructions",
-                    byte, result.instructions_run);
+                println!(
+                    "\nInvalid instruction 0x{:02X} after {} instructions",
+                    byte, result.instructions_run
+                );
             }
             StopReason::CycleLimit => {
-                println!("\nStopped after {} instructions (limit). PC = 0x{:06X}",
-                    result.instructions_run, self.emu.pc());
+                println!(
+                    "\nStopped after {} instructions (limit). PC = 0x{:06X}",
+                    result.instructions_run,
+                    self.emu.pc()
+                );
             }
             StopReason::Paused => {}
         }
@@ -195,7 +203,11 @@ impl Debugger {
     }
 
     fn cmd_step(&mut self, arg: &str) {
-        let n: u64 = if arg.is_empty() { 1 } else { arg.parse().unwrap_or(1) };
+        let n: u64 = if arg.is_empty() {
+            1
+        } else {
+            arg.parse().unwrap_or(1)
+        };
 
         for _ in 0..n {
             if self.emu.is_halted() {
@@ -233,7 +245,9 @@ impl Debugger {
 
         match result.reason {
             StopReason::Breakpoint(addr) => println!("Breakpoint at 0x{:06X}", addr),
-            StopReason::Halted => println!("\nHalted after {} instructions", result.instructions_run),
+            StopReason::Halted => {
+                println!("\nHalted after {} instructions", result.instructions_run)
+            }
             _ => {}
         }
 
@@ -247,7 +261,11 @@ impl Debugger {
         }
         if let Some(addr) = parse_addr(arg) {
             self.emu.add_breakpoint(addr);
-            println!("Breakpoint {} at 0x{:06X}", self.emu.breakpoints().len(), addr);
+            println!(
+                "Breakpoint {} at 0x{:06X}",
+                self.emu.breakpoints().len(),
+                addr
+            );
         } else {
             println!("Bad address: {}", arg);
         }
@@ -339,14 +357,30 @@ impl Debugger {
 
     fn cmd_print(&self, arg: &str) {
         match arg.to_lowercase().as_str() {
-            "r0" => println!("r0 = 0x{:06X} ({})", self.emu.get_reg(0), self.emu.get_reg(0) as i32),
-            "r1" => println!("r1 = 0x{:06X} ({})", self.emu.get_reg(1), self.emu.get_reg(1) as i32),
-            "r2" => println!("r2 = 0x{:06X} ({})", self.emu.get_reg(2), self.emu.get_reg(2) as i32),
+            "r0" => println!(
+                "r0 = 0x{:06X} ({})",
+                self.emu.get_reg(0),
+                self.emu.get_reg(0) as i32
+            ),
+            "r1" => println!(
+                "r1 = 0x{:06X} ({})",
+                self.emu.get_reg(1),
+                self.emu.get_reg(1) as i32
+            ),
+            "r2" => println!(
+                "r2 = 0x{:06X} ({})",
+                self.emu.get_reg(2),
+                self.emu.get_reg(2) as i32
+            ),
             "fp" | "r3" => println!("fp = 0x{:06X}", self.emu.get_reg(3)),
             "sp" | "r4" => println!("sp = 0x{:06X}", self.emu.get_reg(4)),
             "pc" => println!("pc = 0x{:06X}", self.emu.pc()),
             "c" => println!("c = {}", self.emu.condition_flag()),
-            "led" | "leds" => println!("LED = 0x{:02X} (bit0={})", self.emu.get_led(), self.emu.get_led() & 1),
+            "led" | "leds" => println!(
+                "LED = 0x{:02X} (bit0={})",
+                self.emu.get_led(),
+                self.emu.get_led() & 1
+            ),
             _ => {
                 if let Some(addr) = parse_addr(arg) {
                     println!("[0x{:06X}] = 0x{:02X}", addr, self.emu.read_byte(addr));
@@ -372,7 +406,11 @@ impl Debugger {
 
         for (pc, text, size) in self.emu.disassemble(addr, count) {
             let marker = if pc == self.emu.pc() { "=> " } else { "   " };
-            let bp = if self.emu.has_breakpoint(pc) { "*" } else { " " };
+            let bp = if self.emu.has_breakpoint(pc) {
+                "*"
+            } else {
+                " "
+            };
             let mut bytes_str = String::new();
             for i in 0..size {
                 bytes_str.push_str(&format!("{:02X} ", self.emu.read_byte(pc + i)));
@@ -382,7 +420,11 @@ impl Debugger {
     }
 
     fn cmd_trace(&self, arg: &str) {
-        let n: usize = if arg.is_empty() { 20 } else { arg.parse().unwrap_or(20) };
+        let n: usize = if arg.is_empty() {
+            20
+        } else {
+            arg.parse().unwrap_or(20)
+        };
         let trace = self.emu.trace();
         let entries = trace.last_n(n);
         if entries.is_empty() {
@@ -396,11 +438,14 @@ impl Debugger {
     }
 
     fn cmd_uart(&mut self, arg: &str) {
-        if let Some(rest) = arg.strip_prefix("send ").or_else(|| arg.strip_prefix("tx ")) {
+        if let Some(rest) = arg
+            .strip_prefix("send ")
+            .or_else(|| arg.strip_prefix("tx "))
+        {
             let rest = rest.trim();
             // Support: single char, decimal, 0x hex, or quoted string
             if rest.starts_with('"') && rest.ends_with('"') && rest.len() >= 2 {
-                let s = &rest[1..rest.len()-1];
+                let s = &rest[1..rest.len() - 1];
                 for b in s.bytes() {
                     self.emu.send_uart_byte(b);
                 }
@@ -421,10 +466,16 @@ impl Debugger {
     fn cmd_led(&self) {
         let led = self.emu.get_led() & 1;
         let pressed = self.emu.get_button();
-        println!("LED D2: {} (bit0 = {})", if led != 0 { "ON" } else { "OFF" }, led);
-        println!("Button S2: {} (bit0 = {})",
+        println!(
+            "LED D2: {} (bit0 = {})",
+            if led != 0 { "ON" } else { "OFF" },
+            led
+        );
+        println!(
+            "Button S2: {} (bit0 = {})",
             if pressed { "LOW (pressed)" } else { "HIGH" },
-            if pressed { 0 } else { 1 });
+            if pressed { 0 } else { 1 }
+        );
     }
 
     fn cmd_button(&mut self, arg: &str) {
@@ -448,8 +499,14 @@ impl Debugger {
             }
             "" => {
                 let pressed = self.emu.get_button();
-                println!("Button S2: {}",
-                    if pressed { "pressed (LOW)" } else { "released (HIGH)" });
+                println!(
+                    "Button S2: {}",
+                    if pressed {
+                        "pressed (LOW)"
+                    } else {
+                        "released (HIGH)"
+                    }
+                );
             }
             _ => println!("Usage: button [press|release|toggle]"),
         }
@@ -487,20 +544,25 @@ impl Debugger {
 
     fn show_regs(&self) {
         let s = self.emu.snapshot();
-        println!("  r0 = 0x{:06X}  r1 = 0x{:06X}  r2 = 0x{:06X}",
-            s.regs[0], s.regs[1], s.regs[2]);
-        println!("  fp = 0x{:06X}  sp = 0x{:06X}  z  = 0x{:06X}",
-            s.regs[3], s.regs[4], s.regs[5]);
-        println!("  iv = 0x{:06X}  ir = 0x{:06X}",
-            s.regs[6], s.regs[7]);
+        println!(
+            "  r0 = 0x{:06X}  r1 = 0x{:06X}  r2 = 0x{:06X}",
+            s.regs[0], s.regs[1], s.regs[2]
+        );
+        println!(
+            "  fp = 0x{:06X}  sp = 0x{:06X}  z  = 0x{:06X}",
+            s.regs[3], s.regs[4], s.regs[5]
+        );
+        println!("  iv = 0x{:06X}  ir = 0x{:06X}", s.regs[6], s.regs[7]);
         println!("  pc = 0x{:06X}  c  = {}", s.pc, s.c as u8);
         println!("  LED = 0x{:02X}  cycles = {}", s.led, s.cycles);
     }
 
     fn show_regs_short(&self) {
         let s = self.emu.snapshot();
-        println!("  r0={:06X} r1={:06X} r2={:06X} fp={:06X} sp={:06X} c={}",
-            s.regs[0], s.regs[1], s.regs[2], s.regs[3], s.regs[4], s.c as u8);
+        println!(
+            "  r0={:06X} r1={:06X} r2={:06X} fp={:06X} sp={:06X} c={}",
+            s.regs[0], s.regs[1], s.regs[2], s.regs[3], s.regs[4], s.c as u8
+        );
     }
 }
 

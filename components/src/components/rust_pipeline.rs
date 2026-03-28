@@ -22,8 +22,8 @@ pub struct RustExample {
 /// The display renders summary lines for zero gaps between non-zero rows.
 #[derive(Clone, PartialEq, Default)]
 pub struct SparseMemory {
-    pub region_start: u32,  // First address of the region
-    pub region_end: u32,    // Last address + 1 (exclusive)
+    pub region_start: u32, // First address of the region
+    pub region_end: u32,   // Last address + 1 (exclusive)
     /// Non-zero rows: (row_start_address, 16 bytes). Sorted by address.
     pub rows: Vec<(u32, Vec<u8>)>,
 }
@@ -55,14 +55,14 @@ pub struct EmulatorState {
     pub condition_flag: bool,
     pub is_halted: bool,
     pub led_value: u8,
-    pub led_duty_cycle: f32,  // 0.0 (always off) to 1.0 (always on) over Run
-    pub led_on_count: u64,    // Instructions executed with LED on (cumulative during Run)
+    pub led_duty_cycle: f32, // 0.0 (always off) to 1.0 (always on) over Run
+    pub led_on_count: u64,   // Instructions executed with LED on (cumulative during Run)
     pub instruction_count: u32,
-    pub memory_low: SparseMemory,       // SRAM (0x000000-0x0FFFFF)
-    pub memory_io_led: Vec<u8>,         // I/O: LED/Switch at 0xFF0000 (16 bytes)
-    pub memory_io_uart: Vec<u8>,        // I/O: UART at 0xFF0100 (16 bytes)
-    pub memory_stack: SparseMemory,     // EBR/Stack (0xFEE000-0xFEEC00)
-    pub program_end: u32,               // End of code+data region
+    pub memory_low: SparseMemory,   // SRAM (0x000000-0x0FFFFF)
+    pub memory_io_led: Vec<u8>,     // I/O: LED/Switch at 0xFF0000 (16 bytes)
+    pub memory_io_uart: Vec<u8>,    // I/O: UART at 0xFF0100 (16 bytes)
+    pub memory_stack: SparseMemory, // EBR/Stack (0xFEE000-0xFEEC00)
+    pub program_end: u32,           // End of code+data region
     pub prev_memory_low: SparseMemory,
     pub prev_memory_io_led: Vec<u8>,
     pub prev_memory_io_uart: Vec<u8>,
@@ -187,10 +187,10 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
         let examples = props.examples.clone();
         let already_loaded = props.loaded_example.is_some();
         use_effect_with((), move |_| {
-            if !already_loaded
-                && let Some(blink) = examples.iter().find(|e| e.name == "Blink LED") {
-                    on_load.emit(blink.clone());
-                }
+            if !already_loaded && let Some(blink) = examples.iter().find(|e| e.name == "Blink LED")
+            {
+                on_load.emit(blink.clone());
+            }
             || ()
         });
     }
@@ -229,7 +229,8 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
                     {
                         element.scroll_into_view();
                     }
-                }).forget();
+                })
+                .forget();
             }
         })
     };
@@ -252,7 +253,6 @@ pub fn rust_pipeline(props: &RustPipelineProps) -> Html {
             })
         }
     };
-
 
     // All wizard steps for rendering
     let all_steps = [

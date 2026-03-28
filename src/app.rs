@@ -5,8 +5,8 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 
 use components::{
-    CExample, CPipeline, DebugPanel, ExampleItem, ExamplePicker, Header, Modal, ProgramArea,
-    EmulatorState, RustExample, RustPipeline, Sidebar, SidebarButton, Tab, TabBar, Tooltip,
+    CExample, CPipeline, DebugPanel, EmulatorState, ExampleItem, ExamplePicker, Header, Modal,
+    ProgramArea, RustExample, RustPipeline, Sidebar, SidebarButton, Tab, TabBar, Tooltip,
 };
 use yew::prelude::*;
 
@@ -245,7 +245,9 @@ pub fn app() -> Html {
             let prev_state = (*asm_emu_state).clone();
 
             for _ in 0..count {
-                if new_cpu.is_halted() { break; }
+                if new_cpu.is_halted() {
+                    break;
+                }
                 if let Err(e) = new_cpu.step() {
                     assembly_output.set(Some(html! {
                         <div class="error-text">
@@ -262,10 +264,15 @@ pub fn app() -> Html {
     };
 
     let on_run = make_run_callback(
-        cpu.clone(), asm_is_running.clone(), asm_emu_state.clone(),
-        asm_stop_requested.borrow().clone(), shared_switches.borrow().clone(),
-        asm_uart_queue.borrow().clone(), asm_uart_clear_flag.borrow().clone(),
-        run_speed_ms.borrow().clone(), asm_run_gen.borrow().clone(),
+        cpu.clone(),
+        asm_is_running.clone(),
+        asm_emu_state.clone(),
+        asm_stop_requested.borrow().clone(),
+        shared_switches.borrow().clone(),
+        asm_uart_queue.borrow().clone(),
+        asm_uart_clear_flag.borrow().clone(),
+        run_speed_ms.borrow().clone(),
+        asm_run_gen.borrow().clone(),
     );
 
     let on_stop = {
@@ -285,9 +292,7 @@ pub fn app() -> Html {
             // Reset CPU and re-assemble current program so Step/Run stay enabled
             let mut new_cpu = WasmCpu::new();
             let code = (*program_code).clone();
-            if !code.is_empty()
-                && new_cpu.assemble(&code).is_ok()
-            {
+            if !code.is_empty() && new_cpu.assemble(&code).is_ok() {
                 assembly_lines.set(new_cpu.get_assembled_lines());
                 asm_emu_state.set(capture_cpu_state_initial(&new_cpu));
                 cpu.set(new_cpu);
@@ -379,7 +384,11 @@ pub fn app() -> Html {
                     condition_flag: new_cpu.get_condition_flag(),
                     is_halted: new_cpu.is_halted(),
                     led_value: new_cpu.get_led_value(),
-                    led_duty_cycle: if (new_cpu.get_led_value() & 1) == 1 { 1.0 } else { 0.0 },
+                    led_duty_cycle: if (new_cpu.get_led_value() & 1) == 1 {
+                        1.0
+                    } else {
+                        0.0
+                    },
                     led_on_count: 0,
                     instruction_count: new_cpu.get_instruction_count(),
                     memory_low: memory_low.clone(),
@@ -412,10 +421,15 @@ pub fn app() -> Html {
 
     // Rust pipeline: Run with stop button and switch support
     let on_rust_run = make_run_callback(
-        rust_cpu.clone(), rust_is_running.clone(), rust_emu_state.clone(),
-        rust_stop_requested.borrow().clone(), rust_shared_switches.borrow().clone(),
-        rust_uart_queue.borrow().clone(), rust_uart_clear_flag.borrow().clone(),
-        run_speed_ms.borrow().clone(), rust_run_gen.borrow().clone(),
+        rust_cpu.clone(),
+        rust_is_running.clone(),
+        rust_emu_state.clone(),
+        rust_stop_requested.borrow().clone(),
+        rust_shared_switches.borrow().clone(),
+        rust_uart_queue.borrow().clone(),
+        rust_uart_clear_flag.borrow().clone(),
+        run_speed_ms.borrow().clone(),
+        rust_run_gen.borrow().clone(),
     );
 
     // Rust pipeline: Stop execution
@@ -428,12 +442,16 @@ pub fn app() -> Html {
 
     // Rust pipeline: Toggle switch
     let on_rust_switch_toggle = make_switch_callback(
-        rust_switch_value.clone(), rust_cpu.clone(), rust_shared_switches.borrow().clone(),
+        rust_switch_value.clone(),
+        rust_cpu.clone(),
+        rust_shared_switches.borrow().clone(),
     );
 
     // Rust pipeline: UART send
     let on_rust_uart_send = make_uart_send_callback(
-        rust_cpu.clone(), rust_emu_state.clone(), rust_is_running.clone(),
+        rust_cpu.clone(),
+        rust_emu_state.clone(),
+        rust_is_running.clone(),
         rust_uart_queue.borrow().clone(),
     );
 
@@ -474,7 +492,11 @@ pub fn app() -> Html {
                         condition_flag: new_cpu.get_condition_flag(),
                         is_halted: new_cpu.is_halted(),
                         led_value: new_cpu.get_led_value(),
-                        led_duty_cycle: if (new_cpu.get_led_value() & 1) == 1 { 1.0 } else { 0.0 },
+                        led_duty_cycle: if (new_cpu.get_led_value() & 1) == 1 {
+                            1.0
+                        } else {
+                            0.0
+                        },
                         led_on_count: 0,
                         instruction_count: new_cpu.get_instruction_count(),
                         memory_low: memory_low.clone(),
@@ -505,9 +527,21 @@ pub fn app() -> Html {
     // Rust pipeline: Unload (clear loaded state)
     // Tab definitions
     let tabs = vec![
-        Tab { id: "assembler".to_string(), label: "Assembler".to_string(), tooltip: Some("Write and run COR24 assembly directly".to_string()) },
-        Tab { id: "c".to_string(), label: "C".to_string(), tooltip: Some("C → COR24 compilation pipeline (MakerLisp's cc24)".to_string()) },
-        Tab { id: "rust".to_string(), label: "Rust".to_string(), tooltip: Some("Rust → MSP430 → COR24 compilation pipeline".to_string()) },
+        Tab {
+            id: "assembler".to_string(),
+            label: "Assembler".to_string(),
+            tooltip: Some("Write and run COR24 assembly directly".to_string()),
+        },
+        Tab {
+            id: "c".to_string(),
+            label: "C".to_string(),
+            tooltip: Some("C → COR24 compilation pipeline (MakerLisp's cc24)".to_string()),
+        },
+        Tab {
+            id: "rust".to_string(),
+            label: "Rust".to_string(),
+            tooltip: Some("Rust → MSP430 → COR24 compilation pipeline".to_string()),
+        },
     ];
 
     // Get examples for the modal
@@ -521,19 +555,27 @@ pub fn app() -> Html {
 
     // Assembler switch toggle callback
     let on_asm_switch_toggle = make_switch_callback(
-        asm_switch_value.clone(), cpu.clone(), shared_switches.borrow().clone(),
+        asm_switch_value.clone(),
+        cpu.clone(),
+        shared_switches.borrow().clone(),
     );
 
     let on_asm_uart_send = make_uart_send_callback(
-        cpu.clone(), asm_emu_state.clone(), asm_is_running.clone(),
+        cpu.clone(),
+        asm_emu_state.clone(),
+        asm_is_running.clone(),
         asm_uart_queue.borrow().clone(),
     );
     let on_asm_uart_clear = make_uart_clear_callback(
-        cpu.clone(), asm_emu_state.clone(), asm_is_running.clone(),
+        cpu.clone(),
+        asm_emu_state.clone(),
+        asm_is_running.clone(),
         asm_uart_clear_flag.borrow().clone(),
     );
     let on_rust_uart_clear = make_uart_clear_callback(
-        rust_cpu.clone(), rust_emu_state.clone(), rust_is_running.clone(),
+        rust_cpu.clone(),
+        rust_emu_state.clone(),
+        rust_is_running.clone(),
         rust_uart_clear_flag.borrow().clone(),
     );
 
@@ -585,7 +627,11 @@ pub fn app() -> Html {
                     condition_flag: new_cpu.get_condition_flag(),
                     is_halted: new_cpu.is_halted(),
                     led_value: new_cpu.get_led_value(),
-                    led_duty_cycle: if (new_cpu.get_led_value() & 1) == 1 { 1.0 } else { 0.0 },
+                    led_duty_cycle: if (new_cpu.get_led_value() & 1) == 1 {
+                        1.0
+                    } else {
+                        0.0
+                    },
                     led_on_count: 0,
                     instruction_count: new_cpu.get_instruction_count(),
                     memory_low: memory_low.clone(),
@@ -616,10 +662,15 @@ pub fn app() -> Html {
     let on_c_step = make_step_callback(c_cpu.clone(), c_emu_state.clone());
 
     let on_c_run = make_run_callback(
-        c_cpu.clone(), c_is_running.clone(), c_emu_state.clone(),
-        c_stop_requested.borrow().clone(), c_shared_switches.borrow().clone(),
-        c_uart_queue.borrow().clone(), c_uart_clear_flag.borrow().clone(),
-        run_speed_ms.borrow().clone(), c_run_gen.borrow().clone(),
+        c_cpu.clone(),
+        c_is_running.clone(),
+        c_emu_state.clone(),
+        c_stop_requested.borrow().clone(),
+        c_shared_switches.borrow().clone(),
+        c_uart_queue.borrow().clone(),
+        c_uart_clear_flag.borrow().clone(),
+        run_speed_ms.borrow().clone(),
+        c_run_gen.borrow().clone(),
     );
 
     // C pipeline: Stop execution
@@ -632,14 +683,20 @@ pub fn app() -> Html {
 
     // C pipeline: Toggle switch
     let on_c_switch_toggle = make_switch_callback(
-        c_switch_value.clone(), c_cpu.clone(), c_shared_switches.borrow().clone(),
+        c_switch_value.clone(),
+        c_cpu.clone(),
+        c_shared_switches.borrow().clone(),
     );
     let on_c_uart_send = make_uart_send_callback(
-        c_cpu.clone(), c_emu_state.clone(), c_is_running.clone(),
+        c_cpu.clone(),
+        c_emu_state.clone(),
+        c_is_running.clone(),
         c_uart_queue.borrow().clone(),
     );
     let on_c_uart_clear = make_uart_clear_callback(
-        c_cpu.clone(), c_emu_state.clone(), c_is_running.clone(),
+        c_cpu.clone(),
+        c_emu_state.clone(),
+        c_is_running.clone(),
         c_uart_clear_flag.borrow().clone(),
     );
 
@@ -679,7 +736,11 @@ pub fn app() -> Html {
                         condition_flag: new_cpu.get_condition_flag(),
                         is_halted: new_cpu.is_halted(),
                         led_value: new_cpu.get_led_value(),
-                        led_duty_cycle: if (new_cpu.get_led_value() & 1) == 1 { 1.0 } else { 0.0 },
+                        led_duty_cycle: if (new_cpu.get_led_value() & 1) == 1 {
+                            1.0
+                        } else {
+                            0.0
+                        },
                         led_on_count: 0,
                         instruction_count: new_cpu.get_instruction_count(),
                         memory_low: memory_low.clone(),
@@ -1593,7 +1654,9 @@ fn run_one_instruction(
         s.led_on_count = led_on_count;
         s.led_duty_cycle = if s.instruction_count > 0 {
             led_on_count as f32 / s.instruction_count as f32
-        } else { 0.0 };
+        } else {
+            0.0
+        };
         state_handle.set(s);
         cpu_handle.set(current_cpu);
         running_handle.set(false);
@@ -1646,7 +1709,9 @@ fn run_one_instruction(
     s.led_on_count = total_on;
     s.led_duty_cycle = if s.instruction_count > 0 {
         total_on as f32 / s.instruction_count as f32
-    } else { 0.0 };
+    } else {
+        0.0
+    };
     state_handle.set(s);
     cpu_handle.set(current_cpu.clone());
 
@@ -1655,8 +1720,22 @@ fn run_one_instruction(
     } else {
         let yield_delay = delay.max(1);
         gloo::timers::callback::Timeout::new(yield_delay, move || {
-            run_one_instruction(current_cpu, cpu_handle, running_handle, state_handle, stop_handle, switch_handle, uart_handle, uart_clear_handle, speed_handle, total_on, run_gen, my_gen);
-        }).forget();
+            run_one_instruction(
+                current_cpu,
+                cpu_handle,
+                running_handle,
+                state_handle,
+                stop_handle,
+                switch_handle,
+                uart_handle,
+                uart_clear_handle,
+                speed_handle,
+                total_on,
+                run_gen,
+                my_gen,
+            );
+        })
+        .forget();
     }
 }
 
@@ -1668,8 +1747,12 @@ fn make_step_callback(
     Callback::from(move |count: u32| {
         let mut new_cpu = (*cpu).clone();
         for _ in 0..count {
-            if new_cpu.is_halted() { break; }
-            if new_cpu.step().is_err() { break; }
+            if new_cpu.is_halted() {
+                break;
+            }
+            if new_cpu.step().is_err() {
+                break;
+            }
         }
         emu_state.set(capture_cpu_state(&new_cpu, &emu_state));
         cpu.set(new_cpu);
@@ -1709,9 +1792,22 @@ fn make_run_callback(
         let gen_handle = run_gen.clone();
 
         gloo::timers::callback::Timeout::new(0, move || {
-            run_one_instruction(current_cpu, cpu_handle, running_handle, state_handle,
-                stop_handle, switch_handle, uart_handle, uart_clear_handle, speed_handle, 0, gen_handle, my_gen);
-        }).forget();
+            run_one_instruction(
+                current_cpu,
+                cpu_handle,
+                running_handle,
+                state_handle,
+                stop_handle,
+                switch_handle,
+                uart_handle,
+                uart_clear_handle,
+                speed_handle,
+                0,
+                gen_handle,
+                my_gen,
+            );
+        })
+        .forget();
     })
 }
 
@@ -1776,7 +1872,11 @@ fn render_selftest_panel(json: &str) -> Html {
     let passed = results.iter().filter(|r| r.0).count();
     let failed = total - passed;
     let all_pass = failed == 0;
-    let summary_class = if all_pass { "selftest-summary selftest-pass" } else { "selftest-summary selftest-fail" };
+    let summary_class = if all_pass {
+        "selftest-summary selftest-pass"
+    } else {
+        "selftest-summary selftest-fail"
+    };
 
     html! {
         <div class="selftest-panel">
@@ -1810,8 +1910,11 @@ fn parse_selftest_json(json: &str) -> Vec<(bool, String, String)> {
     let mut results = Vec::new();
     // Simple JSON array parser — each element: {"name":"...","pass":true/false,"detail":"..."}
     for entry in json.split("},{") {
-        let entry = entry.trim_start_matches('[').trim_start_matches('{')
-            .trim_end_matches(']').trim_end_matches('}');
+        let entry = entry
+            .trim_start_matches('[')
+            .trim_start_matches('{')
+            .trim_end_matches(']')
+            .trim_end_matches('}');
         let mut name = String::new();
         let mut pass = false;
         let mut detail = String::new();
@@ -1863,7 +1966,11 @@ fn capture_cpu_state(cpu: &WasmCpu, prev: &EmulatorState) -> EmulatorState {
         led_duty_cycle: {
             let on = prev.led_on_count + if (cpu.get_led_value() & 1) == 1 { 1 } else { 0 };
             let total = cpu.get_instruction_count() as u64;
-            if total > 0 { on as f32 / total as f32 } else { 0.0 }
+            if total > 0 {
+                on as f32 / total as f32
+            } else {
+                0.0
+            }
         },
         instruction_count: cpu.get_instruction_count(),
         memory_low: memory_low.clone(),
@@ -1903,4 +2010,3 @@ fn capture_cpu_state_initial(cpu: &WasmCpu) -> EmulatorState {
     state.prev_prev_memory_stack = state.memory_stack.clone();
     state
 }
-

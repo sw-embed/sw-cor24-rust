@@ -846,14 +846,16 @@ impl Assembler {
                 if !unsigned && imm > 127 && imm < 0xFFFFFF80 {
                     self.errors.push(format!(
                         "Line {}: lc immediate {} out of range (0..127 or use lcu for unsigned)",
-                        line_num + 1, imm
+                        line_num + 1,
+                        imm
                     ));
                     return vec![];
                 }
                 if unsigned && imm > 255 {
                     self.errors.push(format!(
                         "Line {}: lcu immediate {} out of range (0..255)",
-                        line_num + 1, imm
+                        line_num + 1,
+                        imm
                     ));
                     return vec![];
                 }
@@ -1136,7 +1138,11 @@ mod tests {
 
         let mut asm = Assembler::new();
         let result = asm.assemble(code);
-        assert!(result.errors.is_empty(), "Assembly errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Assembly errors: {:?}",
+            result.errors
+        );
 
         let mut cpu = CpuState::new();
         cpu.load_program(0, &result.bytes);
@@ -1146,11 +1152,20 @@ mod tests {
         // Execute the 3 instructions
         for i in 0..3 {
             let res = executor.step(&mut cpu);
-            assert!(matches!(res, crate::cpu::ExecuteResult::Ok), "Step {} failed: {:?}", i, res);
+            assert!(
+                matches!(res, crate::cpu::ExecuteResult::Ok),
+                "Step {} failed: {:?}",
+                i,
+                res
+            );
         }
 
         // Check LED value
-        assert_eq!(cpu.io.leds, 85, "LED value should be 85, got {}", cpu.io.leds);
+        assert_eq!(
+            cpu.io.leds, 85,
+            "LED value should be 85, got {}",
+            cpu.io.leds
+        );
     }
 
     #[test]
@@ -1194,7 +1209,11 @@ mod tests {
         let code = "lc r0,3\nloop:\nadd r0,-1\nceq r0,z\nbrf loop";
         let mut asm = Assembler::new();
         let result = asm.assemble(code);
-        assert!(result.errors.is_empty(), "Assembly errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Assembly errors: {:?}",
+            result.errors
+        );
 
         let mut cpu = CpuState::new();
         cpu.load_program(0, &result.bytes);
@@ -1228,7 +1247,11 @@ halt:
 "#;
         let mut asm = Assembler::new();
         let result = asm.assemble(code);
-        assert!(result.errors.is_empty(), "Assembly errors: {:?}", result.errors);
+        assert!(
+            result.errors.is_empty(),
+            "Assembly errors: {:?}",
+            result.errors
+        );
         assert!(!result.bytes.is_empty(), "Should produce bytes");
     }
 
@@ -1243,7 +1266,9 @@ halt:
             let result = asm.assemble(&code);
             assert!(
                 !result.errors.is_empty(),
-                "{} should be rejected but was accepted: {:?}", reg, result.bytes
+                "{} should be rejected but was accepted: {:?}",
+                reg,
+                result.bytes
             );
         }
     }
@@ -1257,7 +1282,8 @@ halt:
             let result = asm.assemble(&code);
             assert!(
                 !result.errors.is_empty(),
-                "{} as source operand should be rejected", reg
+                "{} as source operand should be rejected",
+                reg
             );
         }
         // Test in memory base register position
@@ -1267,7 +1293,8 @@ halt:
             let result = asm.assemble(&code);
             assert!(
                 !result.errors.is_empty(),
-                "{} as base register should be rejected", reg
+                "{} as base register should be rejected",
+                reg
             );
         }
     }
@@ -1319,9 +1346,7 @@ halt:
     #[test]
     fn test_word_multiple_labels() {
         let mut asm = Assembler::new();
-        let result = asm.assemble(
-            "a:\n  nop\nb:\n  nop\ntable:\n  .word a\n  .word b",
-        );
+        let result = asm.assemble("a:\n  nop\nb:\n  nop\ntable:\n  .word a\n  .word b");
         assert!(result.errors.is_empty(), "Errors: {:?}", result.errors);
         // nop=0xFF (1 byte each), a=0, b=1
         assert_eq!(
@@ -1354,7 +1379,9 @@ halt:
             let result = asm.assemble(code);
             assert!(
                 result.errors.is_empty(),
-                "'{}' should be accepted but got errors: {:?}", code, result.errors
+                "'{}' should be accepted but got errors: {:?}",
+                code,
+                result.errors
             );
         }
     }

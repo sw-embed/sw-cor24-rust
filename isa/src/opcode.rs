@@ -132,14 +132,35 @@ impl Opcode {
     /// Get the instruction format for this opcode
     pub fn format(&self) -> InstructionFormat {
         match self {
-            Opcode::AddReg | Opcode::And | Opcode::Ceq | Opcode::Cls | Opcode::Clu
-            | Opcode::Jal | Opcode::Jmp | Opcode::Mov | Opcode::Mul | Opcode::Or
-            | Opcode::Pop | Opcode::Push | Opcode::Shl | Opcode::Sra | Opcode::Srl
-            | Opcode::Sub | Opcode::Sxt | Opcode::Xor | Opcode::Zxt => {
-                InstructionFormat::SingleByte
-            }
-            Opcode::AddImm | Opcode::Bra | Opcode::Brf | Opcode::Brt | Opcode::Lb
-            | Opcode::Lbu | Opcode::Lc | Opcode::Lcu | Opcode::Lw | Opcode::Sb
+            Opcode::AddReg
+            | Opcode::And
+            | Opcode::Ceq
+            | Opcode::Cls
+            | Opcode::Clu
+            | Opcode::Jal
+            | Opcode::Jmp
+            | Opcode::Mov
+            | Opcode::Mul
+            | Opcode::Or
+            | Opcode::Pop
+            | Opcode::Push
+            | Opcode::Shl
+            | Opcode::Sra
+            | Opcode::Srl
+            | Opcode::Sub
+            | Opcode::Sxt
+            | Opcode::Xor
+            | Opcode::Zxt => InstructionFormat::SingleByte,
+            Opcode::AddImm
+            | Opcode::Bra
+            | Opcode::Brf
+            | Opcode::Brt
+            | Opcode::Lb
+            | Opcode::Lbu
+            | Opcode::Lc
+            | Opcode::Lcu
+            | Opcode::Lw
+            | Opcode::Sb
             | Opcode::Sw => InstructionFormat::TwoBytes,
             Opcode::La | Opcode::SubSp => InstructionFormat::FourBytes,
             Opcode::Invalid => InstructionFormat::SingleByte,

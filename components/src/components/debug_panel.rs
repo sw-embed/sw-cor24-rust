@@ -29,7 +29,13 @@ fn format_uart_output(s: &str) -> String {
         };
         let ascii: String = chunk
             .iter()
-            .map(|&b| if (0x20..0x7F).contains(&b) { b as char } else { '.' })
+            .map(|&b| {
+                if (0x20..0x7F).contains(&b) {
+                    b as char
+                } else {
+                    '.'
+                }
+            })
             .collect();
         lines.push(format!("{}  {}", hex_str, ascii));
     }
@@ -78,7 +84,10 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
     // Each asm line has id="asm-{ADDR:04X}". Scroll container to that element.
     {
         let pc = state.pc;
-        let scroll_id = props.listing_scroll_id.clone().unwrap_or_else(|| "debug-asm-listing-scroll".to_string());
+        let scroll_id = props
+            .listing_scroll_id
+            .clone()
+            .unwrap_or_else(|| "debug-asm-listing-scroll".to_string());
         use_effect_with(pc, move |&pc| {
             let target_id = format!("asm-{:04X}", pc);
             if let Some(window) = web_sys::window()
@@ -112,15 +121,27 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
     // LED display: show current state, duty cycle in tooltip
     let led_is_on = (state.led_value & 1) == 1;
     let duty = state.led_duty_cycle;
-    let led_class = if led_is_on { "led led-on led-large" } else { "led led-off led-large" };
+    let led_class = if led_is_on {
+        "led led-on led-large"
+    } else {
+        "led led-off led-large"
+    };
     let led_status = if led_is_on { "_ON" } else { "OFF" };
     let led_tooltip = if state.instruction_count > 0 {
-        format!("LED D2: {} (duty cycle: {:.0}%)", led_status.trim(), duty * 100.0)
+        format!(
+            "LED D2: {} (duty cycle: {:.0}%)",
+            led_status.trim(),
+            duty * 100.0
+        )
     } else {
         format!("LED D2: {}", led_status.trim())
     };
     let switch_on = (props.switch_value & 1) == 1;
-    let switch_class = if switch_on { "switch switch-on switch-large" } else { "switch switch-off switch-large" };
+    let switch_class = if switch_on {
+        "switch switch-on switch-large"
+    } else {
+        "switch switch-off switch-large"
+    };
     let switch_status = if switch_on { "PRESSED" } else { "RELEASED" };
 
     let on_switch_click = {
@@ -161,22 +182,36 @@ pub fn debug_panel(props: &DebugPanelProps) -> Html {
 
     // Read speed from Rc<Cell> (always current). speed_display forces re-render on change.
     let _ = *speed_display; // trigger re-render dependency
-    let ms = props.run_speed_ms.as_ref().map_or(10u32, |rc| rc.get()).clamp(1, 100);
+    let ms = props
+        .run_speed_ms
+        .as_ref()
+        .map_or(10u32, |rc| rc.get())
+        .clamp(1, 100);
     let ips = 1000 / ms;
     let speed_tip = format!("{}ms/instr ({}/sec)", ms, ips);
     let speed_val = format!("{}/s", ips);
     // Log scale: slider 0=10/s(100ms), 50=100/s(10ms), 100=1000/s(1ms)
     // ips = 10^(1 + slider/50), so slider = 50*(log10(ips) - 1)
-    let speed_slider_pos = format!("{}", (((ips as f64).log10() - 1.0) * 50.0).round().max(0.0) as u32);
+    let speed_slider_pos = format!(
+        "{}",
+        (((ips as f64).log10() - 1.0) * 50.0).round().max(0.0) as u32
+    );
 
     let on_reset_click = {
         let on_reset = props.on_reset.clone();
         Callback::from(move |_| on_reset.emit(()))
     };
 
-    let scroll_id = props.listing_scroll_id.clone().unwrap_or_else(|| "debug-asm-listing-scroll".to_string());
+    let scroll_id = props
+        .listing_scroll_id
+        .clone()
+        .unwrap_or_else(|| "debug-asm-listing-scroll".to_string());
 
-    let content_class = if props.show_listing { "debug-content" } else { "debug-content debug-content-single" };
+    let content_class = if props.show_listing {
+        "debug-content"
+    } else {
+        "debug-content debug-content-single"
+    };
 
     html! {
         <div class="debug-panel">
@@ -459,8 +494,15 @@ fn zero_summary(gap_start: u32, gap_end: u32) -> Html {
 /// `prev` and `prev_prev` are the SparseMemory from prior steps for change detection.
 fn sparse_data_row(addr: u32, data: &[u8], prev: &SparseMemory, prev_prev: &SparseMemory) -> Html {
     // ASCII tooltip: printable bytes shown as-is, others as '.'
-    let ascii: String = data.iter()
-        .map(|&b| if (0x20..0x7F).contains(&b) { b as char } else { '.' })
+    let ascii: String = data
+        .iter()
+        .map(|&b| {
+            if (0x20..0x7F).contains(&b) {
+                b as char
+            } else {
+                '.'
+            }
+        })
         .collect();
     let tooltip = format!("{:06X}: |{}|", addr, ascii);
     html! {
@@ -522,7 +564,11 @@ fn format_sparse_memory(mem: &SparseMemory, prev: &SparseMemory, prev_prev: &Spa
 
 /// Format sparse memory in reverse order (high address first) with zero-gap summaries.
 /// Used for stack display where high addresses are at the top.
-fn format_sparse_memory_reversed(mem: &SparseMemory, prev: &SparseMemory, prev_prev: &SparseMemory) -> Html {
+fn format_sparse_memory_reversed(
+    mem: &SparseMemory,
+    prev: &SparseMemory,
+    prev_prev: &SparseMemory,
+) -> Html {
     let mut elements: Vec<Html> = Vec::new();
     let mut cursor = mem.region_end;
 

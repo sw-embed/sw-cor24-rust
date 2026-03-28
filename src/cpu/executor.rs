@@ -2126,9 +2126,10 @@ mod tests {
 
     #[test]
     fn test_sieve_lgo_produces_correct_output() {
-        let lgo = std::fs::read_to_string(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/docs/research/asld24/sieve.lgo"),
-        )
+        let lgo = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/docs/research/asld24/sieve.lgo"
+        ))
         .expect("sieve.lgo must exist");
 
         let mut cpu = CpuState::new();
@@ -2200,7 +2201,10 @@ mod tests {
         cpu.write_byte(0, add_byte);
 
         executor.step(&mut cpu);
-        assert_eq!(cpu.pc, 1, "Should execute normal instruction, not interrupt");
+        assert_eq!(
+            cpu.pc, 1,
+            "Should execute normal instruction, not interrupt"
+        );
     }
 
     #[test]
@@ -2213,7 +2217,10 @@ mod tests {
         cpu.write_byte(0, add_byte);
 
         executor.step(&mut cpu);
-        assert_eq!(cpu.pc, 1, "Should execute normal instruction without interrupt");
+        assert_eq!(
+            cpu.pc, 1,
+            "Should execute normal instruction without interrupt"
+        );
         assert!(!cpu.intis);
     }
 
@@ -2227,7 +2234,10 @@ mod tests {
         cpu.write_byte(0, add_byte);
 
         executor.step(&mut cpu);
-        assert_eq!(cpu.pc, 1, "Should execute normal instruction without RX data");
+        assert_eq!(
+            cpu.pc, 1,
+            "Should execute normal instruction without RX data"
+        );
         assert!(!cpu.intis);
     }
 }

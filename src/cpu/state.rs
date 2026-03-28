@@ -138,14 +138,20 @@ impl fmt::Display for TraceEntry {
         // Disassemble the instruction
         let disasm = self.disassemble();
 
-        write!(f, "{:5} 0x{:06X}  {:<24}", self.instruction_num, self.pc, disasm)?;
+        write!(
+            f,
+            "{:5} 0x{:06X}  {:<24}",
+            self.instruction_num, self.pc, disasm
+        )?;
 
         // Show register changes
         let mut changes = Vec::new();
         for (i, name) in REG_NAMES.iter().enumerate() {
             if self.regs_before[i] != self.regs_after[i] {
-                changes.push(format!("{}:0x{:06X}→0x{:06X}",
-                    name, self.regs_before[i], self.regs_after[i]));
+                changes.push(format!(
+                    "{}:0x{:06X}→0x{:06X}",
+                    name, self.regs_before[i], self.regs_after[i]
+                ));
             }
         }
         if self.c_before != self.c_after {
@@ -299,10 +305,15 @@ impl TraceBuffer {
     pub fn format_last(&self, n: usize) -> String {
         let entries = self.last_n(n);
         let mut out = String::new();
-        out.push_str(&format!("--- Trace (last {} of {} total) ---\n",
-            entries.len(), self.count));
-        out.push_str(&format!("{:>5} {:>8}  {:<24}  {}\n",
-            "#", "PC", "Instruction", "Changes"));
+        out.push_str(&format!(
+            "--- Trace (last {} of {} total) ---\n",
+            entries.len(),
+            self.count
+        ));
+        out.push_str(&format!(
+            "{:>5} {:>8}  {:<24}  {}\n",
+            "#", "PC", "Instruction", "Changes"
+        ));
         for entry in &entries {
             out.push_str(&format!("{}\n", entry));
         }
@@ -632,7 +643,11 @@ mod tests {
         cpu.write_byte(0x000100, 0x42);
         assert_eq!(cpu.read_byte(0x000100), 0x42);
         // Must NOT alias to EBR
-        assert_eq!(cpu.read_byte(0xFEE100), 0x00, "SRAM must not alias into EBR");
+        assert_eq!(
+            cpu.read_byte(0xFEE100),
+            0x00,
+            "SRAM must not alias into EBR"
+        );
     }
 
     #[test]
@@ -641,7 +656,11 @@ mod tests {
         cpu.write_byte(0xFEE000, 0xAA);
         assert_eq!(cpu.read_byte(0xFEE000), 0xAA);
         // Must NOT alias to SRAM
-        assert_eq!(cpu.read_byte(0x000000), 0x00, "EBR must not alias into SRAM");
+        assert_eq!(
+            cpu.read_byte(0x000000),
+            0x00,
+            "EBR must not alias into SRAM"
+        );
     }
 
     #[test]
@@ -735,7 +754,10 @@ mod tests {
         cpu.io.uart_rx_ready = true;
         let data = cpu.read_byte_exec(0xFF0100);
         assert_eq!(data, b'Z');
-        assert!(!cpu.io.uart_rx_ready, "Reading UART data auto-clears RX ready");
+        assert!(
+            !cpu.io.uart_rx_ready,
+            "Reading UART data auto-clears RX ready"
+        );
     }
 
     #[test]
@@ -792,7 +814,10 @@ mod tests {
         // Read UART status at 0xFF0101
         let status = cpu.read_byte(0xFF0101);
         // CTS should be active (bit 1 = 1) for putchr to proceed
-        assert!(status & 0x02 != 0, "CTS must be active for putchr to proceed");
+        assert!(
+            status & 0x02 != 0,
+            "CTS must be active for putchr to proceed"
+        );
         // TX not busy (bit 7 = 0) so cls r0,z won't loop
         assert!(status & 0x80 == 0, "TX must not be busy");
     }
@@ -883,8 +908,16 @@ mod tests {
         cpu.write_word(sp, 0xFFFFFF);
 
         // I/O region should be unchanged
-        assert_eq!(cpu.read_byte(0xFF0000), led_before, "I/O LED register must not be corrupted by stack");
-        assert_eq!(cpu.read_byte(0xFF0100), uart_before, "I/O UART data must not be corrupted by stack");
+        assert_eq!(
+            cpu.read_byte(0xFF0000),
+            led_before,
+            "I/O LED register must not be corrupted by stack"
+        );
+        assert_eq!(
+            cpu.read_byte(0xFF0100),
+            uart_before,
+            "I/O UART data must not be corrupted by stack"
+        );
     }
 
     // ========== Sign Extension ==========

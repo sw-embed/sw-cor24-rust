@@ -22,7 +22,7 @@ pub struct CExample {
 /// Wizard steps for C pipeline
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum CWizardStep {
-    Source,    // C source code
+    Source,   // C source code
     Compile,  // COR24 assembly output
     Assemble, // Assembled + debugger
 }
@@ -119,10 +119,9 @@ pub fn c_pipeline(props: &CPipelineProps) -> Html {
         let examples = props.examples.clone();
         let already_loaded = props.loaded_example.is_some();
         use_effect_with((), move |_| {
-            if !already_loaded
-                && let Some(first) = examples.first() {
-                    on_load.emit(first.clone());
-                }
+            if !already_loaded && let Some(first) = examples.first() {
+                on_load.emit(first.clone());
+            }
             || ()
         });
     }
@@ -159,7 +158,8 @@ pub fn c_pipeline(props: &CPipelineProps) -> Html {
                     {
                         element.scroll_into_view();
                     }
-                }).forget();
+                })
+                .forget();
             }
         })
     };
@@ -183,7 +183,11 @@ pub fn c_pipeline(props: &CPipelineProps) -> Html {
         }
     };
 
-    let all_steps = [CWizardStep::Source, CWizardStep::Compile, CWizardStep::Assemble];
+    let all_steps = [
+        CWizardStep::Source,
+        CWizardStep::Compile,
+        CWizardStep::Assemble,
+    ];
 
     html! {
         <div class="rust-wizard-layout">
