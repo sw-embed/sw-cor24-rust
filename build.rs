@@ -18,8 +18,9 @@ fn main() {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .unwrap_or_else(|_| "unknown".to_string());
 
-    println!("cargo:rustc-env=VERGEN_GIT_SHA_SHORT={}", git_sha);
-    println!("cargo:rustc-env=VERGEN_BUILD_TIMESTAMP={}", timestamp);
-    println!("cargo:rustc-env=VERGEN_BUILD_HOST={}", hostname);
+    println!("cargo:rustc-env=BUILD_HOST={}", hostname);
+    println!("cargo:rustc-env=GIT_HASH={}", git_sha);
+    println!("cargo:rustc-env=BUILD_TIMESTAMP={}", timestamp);
     println!("cargo:rerun-if-changed=.git/HEAD");
+    println!("cargo:rerun-if-changed=../.git/HEAD");
 }

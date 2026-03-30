@@ -1,36 +1,31 @@
-[workspace]
-members = [".", "components", "cli", "isa"]
-resolver = "2"
-
 [package]
-name = "cor24-emulator"
+name = "sw-cor24-rust"
 version = "0.1.0"
-edition = "2024"
-authors = ["Michael A Wright"]
+edition = "2021"
+description = "Rust-to-COR24 translation pipeline (wasm2cor24, msp430-to-cor24)"
 license = "MIT"
-description = "COR24 C-Oriented RISC 24-bit Assembly Emulator"
+repository = "https://github.com/sw-embed/sw-cor24-rust"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[features]
-default = ["standalone"]
-standalone = []
+[workspace]
+exclude = ["examples/blink", "demos/demo_echo"]
 
 [dependencies]
-cor24-isa = { path = "./isa", features = ["serde"] }
-components = { path = "./components" }
-yew = { version = "0.21", features = ["csr"] }
-wasm-bindgen = "0.2"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde-wasm-bindgen = "0.6"
-web-sys = { version = "0.3", features = ["console"] }
-gloo = "0.11"
-getrandom = { version = "0.2", features = ["js"] }
-console_error_panic_hook = "0.1"
-thiserror = "2.0"
+wasmparser = "0.121"
+anyhow = "1.0"
+cor24-assembler = { path = "../sw-cor24-assembler" }
+cor24-emulator = { path = "../sw-cor24-emulator" }
+libc = "0.2"
 
-[profile.release]
-opt-level = "z"
-lto = true
+[[bin]]
+name = "wasm2cor24"
+path = "src/main.rs"
+
+[[bin]]
+name = "msp430-to-cor24"
+path = "src/msp430_cli.rs"
+
+[[bin]]
+name = "cor24-run"
+path = "src/run.rs"
+
+[dev-dependencies]
