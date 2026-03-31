@@ -12,7 +12,7 @@ exclude = ["examples/blink", "demos/demo_echo"]
 [dependencies]
 wasmparser = "0.121"
 anyhow = "1.0"
-cor24-assembler = { path = "../sw-cor24-assembler" }
+cor24-assembler = { path = "../sw-cor24-x-assembler" }
 cor24-emulator = { path = "../sw-cor24-emulator" }
 libc = "0.2"
 

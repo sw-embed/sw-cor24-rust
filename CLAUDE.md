@@ -24,7 +24,7 @@ cargo test            # 34 tests
 
 ## Dependencies
 
-- `cor24-assembler` (sibling: `../sw-cor24-assembler`)
+- `cor24-assembler` (sibling: `../sw-cor24-x-assembler`)
 - `cor24-emulator` (sibling: `../sw-cor24-emulator`)
 
 ## Commit Discipline

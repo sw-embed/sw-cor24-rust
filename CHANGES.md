@@ -11,7 +11,7 @@ ecosystem refactoring (sw-cor24-project saga step 004).
 - Removed all non-pipeline code (emulator, assembler, web UI, ISA, CLI tools)
 - Renamed package from `wasm2cor24` to `sw-cor24-rust`
 - Updated dependencies to use sibling repos:
-  - `cor24-assembler` from `../sw-cor24-assembler`
+  - `cor24-assembler` from `../sw-cor24-x-assembler`
   - `cor24-emulator` from `../sw-cor24-emulator`
 - Marked wasm2cor24 binary as deprecated (MSP430 path is preferred)
 - Added `scripts/build.sh`

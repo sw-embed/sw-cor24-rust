@@ -20,7 +20,7 @@ Rust source -> rustc (MSP430 target) -> MSP430 asm -> msp430-to-cor24 -> COR24 a
 Sibling repos (must be cloned alongside this repo):
 
 - [sw-cor24-emulator](https://github.com/sw-embed/sw-cor24-emulator) -- emulator + ISA
-- [sw-cor24-assembler](https://github.com/sw-embed/sw-cor24-assembler) -- assembler
+- [sw-cor24-x-assembler](https://github.com/sw-embed/sw-cor24-x-assembler) -- assembler
 
 ## Build
 
