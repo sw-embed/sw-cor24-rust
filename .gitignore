@@ -16,8 +16,8 @@ docs/research/asld24/longlgo
 # Binary spreadsheets
 *.xlsx
 
-# Agent session artifacts
-.agentrail/
+# Agent session artifacts. .agentrail/ is the durable saga record and MUST
+# be tracked — see CLAUDE.md "Handling .agentrail/ in git".
 .playwright-cli/
 
 # Scratch files

@@ -1,0 +1,1 @@
+Rust-to-COR24 translation pipeline via MSP430 intermediate. Maintain msp430-to-cor24 translator, cor24-run CLI, and supporting demos/scripts. Onboarded onto agentrail 2026-04-28; concrete future work will be added as steps via 'agentrail add'.
